@@ -1,0 +1,66 @@
+{
+  "name": "vis-boilerplate",
+  "projectName": "FEDVis_myapp",
+  "private": true,
+  "scripts": {
+    "build": "vis build",
+    "dev": "vis dev",
+    "format": "prettier --write .",
+    "lint-staged": "lint-staged",
+    "lint-staged:js": "eslint --ext .ts,.tsx",
+    "plugin": "vis plugin list",
+    "start": "vis dev"
+  },
+  "lint-staged": {
+    "**/*.less": "stylelint --syntax less",
+    "**/*.css": "stylelint --syntax css",
+    "**/*.{ts,tsx}": "npm run lint-staged:js",
+    "**/*.{ts,tsx,json,jsx,less}": [
+      "git add",
+      "prettier --write"
+    ]
+  },
+  "dependencies": {
+    "3d-tiles-renderer": "^0.3.9",
+    "@sl-theia/full-screen": "^1.1.1",
+    "@sl-theia/theia-utils": "^1.0.3",
+    "@sl-theia/vis": "^2.1.0",
+    "@types/stats.js": "^0.17.0",
+    "@types/three": "^0.142.0",
+    "@vises/vis-plugin-cesium": "1.1.1",
+    "gsap": "^3.10.4",
+    "leva": "^0.9.28",
+    "mapbox-gl": "^2.9.1",
+    "react-countup": "5.2.0",
+    "stats.js": "^0.17.0",
+    "three": "0.134.0",
+    "tweakpane": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.4.0",
+    "@types/node": "^17.0.19",
+    "@types/react": "^18.0.9",
+    "@types/react-dom": "^18.0.5",
+    "@umijs/fabric": "2.6.4",
+    "cross-env": "^7.0.3",
+    "eslint": "^7.32.0",
+    "husky": "^7.0.4",
+    "jest": "^27.5.1",
+    "lint-staged": "^11.1.2",
+    "prettier": "^2.5.1",
+    "prettier-plugin-organize-imports": "^2.3.4",
+    "prettier-plugin-packagejson": "^2.2.15",
+    "react": "18.1.0",
+    "react-dom": "18.1.0",
+    "stylelint": "^13.13.1",
+    "typescript": "^4.5.2",
+    "yorkie": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "gitHooks": {
+    "pre-commit": "lint-staged",
+    "commit-msg": "fabric verify-commit"
+  }
+}
