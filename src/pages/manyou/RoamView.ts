@@ -51,8 +51,11 @@ class RoamView {
 
   setModel() {
     let model = new Cesium.ModelGraphics({
-      uri: './static/model/npc/SM_FBJD_Boy.glb',
-      scale: 0.01,
+      // NPC
+      // uri: './static/model/npc/SM_FBJD_Boy.glb',
+      // 飞机
+      uri: './static/model/CesiumAir/Cesium_Air.glb',
+      scale: 10,
     });
     return model;
   }
@@ -64,7 +67,7 @@ class RoamView {
         taperPower: 1,
         color: Cesium.Color.PINK,
       }),
-      width: 100,
+      width: 10,
     });
     return path;
   }
