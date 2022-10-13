@@ -22,7 +22,7 @@
         "src/.umi/*"
       ],
       "umi": [
-        "C:\\project\\case\\Cesium\\CesiumMain\\node_modules\\.pnpm\\umi@4.0.0_nflhvwqtvpqpnxpmtoz4xau4fm\\node_modules\\umi"
+        "D:\\Code\\Cesium\\_main\\node_modules\\.pnpm\\umi@4.0.0_nflhvwqtvpqpnxpmtoz4xau4fm\\node_modules\\umi"
       ],
       "umi/typings": [
         "src/.umi/typings"
