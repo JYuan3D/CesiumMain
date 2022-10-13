@@ -1,5 +1,4 @@
 import { Cesium } from '@sl-theia/vis';
-import Popup from './Popup';
 import Tooltip from './Tooltip';
 
 // 绘制线渐变色
@@ -29,6 +28,7 @@ class RoamPath {
   handler: Cesium.ScreenSpaceEventHandler;
   isOpenHandler: boolean;
   curPointIndex: number;
+  pointAndLineArr: Cesium.Entity[];
   pointArr: Cesium.Entity[];
   pointStart: Cesium.Entity | null;
   pointEnd: Cesium.Entity | null;
@@ -40,6 +40,7 @@ class RoamPath {
     this.handler = new Cesium.ScreenSpaceEventHandler(this.scene.canvas);
     this.isOpenHandler = false;
     this.curPointIndex = 1;
+    this.pointAndLineArr = [];
     this.pointArr = [];
     this.pointStart = null;
     this.pointEnd = null;
@@ -148,7 +149,7 @@ class RoamPath {
       let position = this.getWGS84FromDKR(point.position._value);
       path.push(position);
     });
-    console.warn('[path]:', path);
+    return path;
   }
 
   public handleDrawLine(scale?: any) {
@@ -222,12 +223,11 @@ class RoamPath {
 
     _self.handler?.setInputAction(() => {
       _self.closeDrawLine();
-      // @ts-ignore;
-      new Popup({
-        viewer: _self.viewer,
-        geometry: _self.pointEndCartesian,
-        entity: [..._self.pointArr, ..._self.lineArr],
-      });
+      this.pointAndLineArr = [
+        ...this.pointAndLineArr,
+        ...this.pointArr,
+        ...this.lineArr,
+      ];
     }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
   }
 
@@ -253,6 +253,13 @@ class RoamPath {
       this.isOpenHandler = false;
       this.handler.destroy();
     }
+  }
+
+  public destroy() {
+    this.pointAndLineArr.forEach((entity: Cesium.Entity) => {
+      this.viewer.entities.remove(entity);
+    });
+    this.pointAndLineArr = [];
   }
 }
 
