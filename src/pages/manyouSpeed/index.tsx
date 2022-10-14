@@ -17,10 +17,40 @@ function getWGS84FromDKR(cartesian: Cesium.Cartesian3) {
   return [x, y];
 }
 
+// 根据两个坐标点,获取Heading(朝向)
+function getHeading(pointA: Cesium.Cartesian3, pointB: Cesium.Cartesian3) {
+  //建立以点A为原点，X轴为east,Y轴为north,Z轴朝上的坐标系
+  const transform = Cesium.Transforms.eastNorthUpToFixedFrame(pointA);
+  //向量AB
+  const positionvector = Cesium.Cartesian3.subtract(
+    pointB,
+    pointA,
+    new Cesium.Cartesian3(),
+  );
+  //因transform是将A为原点的eastNorthUp坐标系中的点转换到世界坐标系的矩阵
+  //AB为世界坐标中的向量
+  //因此将AB向量转换为A原点坐标系中的向量，需乘以transform的逆矩阵。
+  const vector = Cesium.Matrix4.multiplyByPointAsVector(
+    Cesium.Matrix4.inverse(transform, new Cesium.Matrix4()),
+    positionvector,
+    new Cesium.Cartesian3(),
+  );
+  //归一化
+  const direction = Cesium.Cartesian3.normalize(
+    vector,
+    new Cesium.Cartesian3(),
+  );
+  //heading
+  const heading =
+    Math.atan2(direction.y, direction.x) - Cesium.Math.PI_OVER_TWO;
+  return Cesium.Math.TWO_PI - Cesium.Math.zeroToTwoPi(heading);
+}
+
 export default function Map(props: any) {
   const cesiums = useRef<any>();
   const viewerRef = useRef<any>();
   const modelRef = useRef<any>();
+  const modelHeadingRef = useRef<any>();
   const [isLoadedViewer, setIsLoadedViewer] = useState(false);
 
   useEffect(() => {
@@ -76,6 +106,7 @@ export default function Map(props: any) {
       setReferenceFrame(viewer, startPosition);
       setPoint(viewer, startPosition);
       setPoint(viewer, endPosition);
+      modelHeadingRef.current = getHeading(startPosition, endPosition);
 
       let totalSeconds = countSeconds(startPosition, endPosition);
 
@@ -90,7 +121,7 @@ export default function Map(props: any) {
       viewer.clock.startTime = start.clone();
       viewer.clock.stopTime = stop.clone();
       viewer.clock.currentTime = start.clone();
-      viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
+      viewer.clock.clockRange = Cesium.ClockRange.CLAMPED;
 
       // 通过在两个位置之间移动，为我们的模型创建路径
       // SampledPositionProperty:
@@ -191,11 +222,20 @@ export default function Map(props: any) {
             Cesium.Matrix4.fromRotationTranslation(rot, pos, model.modelMatrix);
           }
         });
+        toChangeUAV(
+          viewerRef.current,
+          modelRef.current,
+          modelHeadingRef.current,
+        );
       });
       modelRef.current = modelPrimitive;
       viewer.trackedEntity = modelLabel;
-      let viewFromPos = new Cesium.Cartesian3(10.0, 10.0, 10.0);
-      modelLabel.viewFrom = new Cesium.ConstantPositionProperty(viewFromPos);
+      // const hpRange = new Cesium.HeadingPitchRange();
+      // hpRange.heading = modelHeading;
+      // hpRange.pitch = Cesium.Math.toRadians(-5.0);
+      // hpRange.range = 50.0;
+      // let viewFromPos = new Cesium.Cartesian3(10.0, 10.0, 10.0);
+      // modelLabel.viewFrom = new Cesium.ConstantPositionProperty(viewFromPos);
       setIsLoadedViewer(true);
     }
   }, []);
@@ -268,7 +308,11 @@ export default function Map(props: any) {
     viewer.clock.shouldAnimate = false;
   };
 
-  const toChangeMan = (viewer: Cesium.Viewer, modelPrimitive: Cesium.Model) => {
+  const toChangeMan = (
+    viewer: Cesium.Viewer,
+    modelPrimitive: Cesium.Model,
+    heading: number,
+  ) => {
     const center = new Cesium.Cartesian3();
     Cesium.Matrix4.multiplyByPoint(
       modelPrimitive.modelMatrix,
@@ -276,13 +320,17 @@ export default function Map(props: any) {
       center,
     );
     const hpRange = new Cesium.HeadingPitchRange();
-    hpRange.heading = Cesium.Math.toRadians(-180.0);
+    hpRange.heading = heading;
     hpRange.pitch = Cesium.Math.toRadians(-5.0);
     hpRange.range = 50.0;
     viewer.camera.lookAt(center, hpRange);
   };
 
-  const toChangeUAV = (viewer: Cesium.Viewer, modelPrimitive: Cesium.Model) => {
+  const toChangeUAV = (
+    viewer: Cesium.Viewer,
+    modelPrimitive: Cesium.Model,
+    heading: number,
+  ) => {
     const center = new Cesium.Cartesian3();
     Cesium.Matrix4.multiplyByPoint(
       modelPrimitive.modelMatrix,
@@ -290,7 +338,7 @@ export default function Map(props: any) {
       center,
     );
     const hpRange = new Cesium.HeadingPitchRange();
-    hpRange.heading = Cesium.Math.toRadians(-200.0);
+    hpRange.heading = Cesium.Math.toRadians(30) + heading;
     hpRange.pitch = Cesium.Math.toRadians(-25.0);
     hpRange.range = 200.0;
     viewer.camera.lookAt(center, hpRange);
@@ -307,12 +355,24 @@ export default function Map(props: any) {
         <button onClick={() => toStart(viewerRef.current)}>开始</button>
         <button onClick={() => toStop(viewerRef.current)}>暂停</button>
         <button
-          onClick={() => toChangeMan(viewerRef.current, modelRef.current)}
+          onClick={() =>
+            toChangeMan(
+              viewerRef.current,
+              modelRef.current,
+              modelHeadingRef.current,
+            )
+          }
         >
           默认视角
         </button>
         <button
-          onClick={() => toChangeUAV(viewerRef.current, modelRef.current)}
+          onClick={() =>
+            toChangeUAV(
+              viewerRef.current,
+              modelRef.current,
+              modelHeadingRef.current,
+            )
+          }
         >
           无人机视角
         </button>
