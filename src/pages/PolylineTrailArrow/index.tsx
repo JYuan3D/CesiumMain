@@ -53,33 +53,41 @@ export default function Map(props: any) {
       let curCanvas = 'a';
       let i = 0;
       function drawCanvasImage(time, result) {
-        let canvas = document.getElementById('canvas-' + curCanvas);
+        let canvas = document.getElementById(
+          'canvas-' + curCanvas,
+        ) as HTMLCanvasElement;
+        let ctx = canvas.getContext('2d');
         let cwidth = 700;
         let cheight = 100;
-        let ctx = canvas.getContext('2d');
         let img = new Image();
         img.src = './static/img/link/arrow.png';
-        ctx.clearRect(0, 0, cwidth, cheight);
+        ctx!.clearRect(0, 0, cwidth, cheight);
         img.onload = function () {
           if (i <= cwidth) {
-            ctx.drawImage(img, i, 0);
-          } else i = 0;
+            ctx!.drawImage(img, i, 0);
+          } else {
+            i = 0;
+          }
           i += 3;
         };
         curCanvas = curCanvas === 'a' ? 'b' : 'a';
         return canvas;
       }
 
+      let materialProperty = new Cesium.ImageMaterialProperty({
+        // 一个Property ，其值由回调函数延迟计算
+        image: new Cesium.CallbackProperty(drawCanvasImage, false),
+        transparent: true,
+      });
+      let rectangleGraphics = new Cesium.RectangleGraphics({
+        coordinates: Cesium.Rectangle.fromDegrees(-90.0, 30.0, -70.0, 35.0),
+        height: 100000,
+        material: materialProperty,
+      });
       viewer.entities.add({
+        // 使用旋转纹理坐标旋转矩形
         name: 'Rotating rectangle with rotating texture coordinate',
-        rectangle: {
-          coordinates: Cesium.Rectangle.fromDegrees(-90.0, 30.0, -70.0, 35.0),
-          height: 100000,
-          material: new Cesium.ImageMaterialProperty({
-            image: new Cesium.CallbackProperty(drawCanvasImage, false),
-            transparent: true,
-          }),
-        },
+        rectangle: rectangleGraphics,
       });
 
       viewer.zoomTo(viewer.entities);
