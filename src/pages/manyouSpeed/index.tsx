@@ -8,15 +8,6 @@ import styles from './index.less';
  * [-117.01963074805985, 34.89172942227679]
  */
 
-function getWGS84FromDKR(cartesian: Cesium.Cartesian3) {
-  let cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-  let x = Cesium.Math.toDegrees(cartographic.longitude);
-  let y = Cesium.Math.toDegrees(cartographic.latitude);
-  let h = Cesium.Math.toDegrees(cartographic.height);
-  console.warn('h', h);
-  return [x, y];
-}
-
 // 根据两个坐标点,获取Heading(朝向)
 function getHeading(pointA: Cesium.Cartesian3, pointB: Cesium.Cartesian3) {
   //建立以点A为原点，X轴为east,Y轴为north,Z轴朝上的坐标系
@@ -92,6 +83,7 @@ export default function Map(props: any) {
         110.25,
         34.56,
       );
+
       const startPosition = Cesium.Cartesian3.fromDegrees(
         -117.02289249743924,
         34.88879317755725,
@@ -102,26 +94,22 @@ export default function Map(props: any) {
         34.89180055567654,
         0,
       );
+      const nextPosition = Cesium.Cartesian3.fromDegrees(
+        -117.01963074805985,
+        34.89172942227679,
+        0,
+      );
 
       setReferenceFrame(viewer, startPosition);
       setPoint(viewer, startPosition);
       setPoint(viewer, endPosition);
+      setPoint(viewer, nextPosition);
       modelHeadingRef.current = getHeading(startPosition, endPosition);
 
-      let totalSeconds = countSeconds(startPosition, endPosition);
-
-      // 确保查看器处于所需时间
-      const start = Cesium.JulianDate.fromDate(new Date(2018, 11, 12, 15));
-      const stop = Cesium.JulianDate.addSeconds(
-        start,
-        totalSeconds,
-        new Cesium.JulianDate(),
-      );
-
-      viewer.clock.startTime = start.clone();
-      viewer.clock.stopTime = stop.clone();
-      viewer.clock.currentTime = start.clone();
-      viewer.clock.clockRange = Cesium.ClockRange.CLAMPED;
+      let totalSecondsNo1 = countSeconds(startPosition, endPosition);
+      let totalSecondsNo2 = countSeconds(endPosition, nextPosition);
+      console.warn('[totalSecondsNo1]:', totalSecondsNo1);
+      console.warn('[totalSecondsNo2]:', totalSecondsNo2);
 
       // 通过在两个位置之间移动，为我们的模型创建路径
       // SampledPositionProperty:
@@ -136,106 +124,62 @@ export default function Map(props: any) {
         position,
         false,
       );
-      const velocityVector = new Cesium.Cartesian3();
 
-      const numberOfSamples = 100;
-      let prevLocation = startPosition;
-      let totalDistance = 0;
-      for (let i = 0; i <= numberOfSamples; ++i) {
-        const factor = i / numberOfSamples;
-        const time = Cesium.JulianDate.addSeconds(
-          start, // 日期
-          factor * totalSeconds, // 添加或减去的秒数
-          new Cesium.JulianDate(),
-        );
-
-        // 使用非线性因子，使模型加速。
-        const locationFactor = Math.pow(factor, 1);
-        // 使用提供的笛卡尔坐标计算locationFactor处的线性插值或外推。
-        const location = Cesium.Cartesian3.lerp(
-          startPosition,
-          endPosition,
-          locationFactor,
-          new Cesium.Cartesian3(),
-        );
-        position.addSample(time, location);
-        distance.addSample(
-          time,
-          (totalDistance += Cesium.Cartesian3.distance(location, prevLocation)),
-        );
-        prevLocation = location;
-      }
-
-      function updateSpeedLabel(time: Cesium.JulianDate) {
-        // 在提供的时间time获取属性的值velocityVector
-        velocityVectorProperty.getValue(time, velocityVector);
-        const metersPerSecond = Cesium.Cartesian3.magnitude(velocityVector); // 计算笛卡尔的大小（长度）
-        const kmPerHour = Math.round(metersPerSecond * 3.6);
-
-        return `${kmPerHour * viewer.clock.multiplier} km/hour`;
-      }
-
-      // Add our model.
-      const modelPrimitive: Cesium.Model = viewer.scene.primitives.add(
-        Cesium.Model.fromGltf({
-          url: './static/model/npc/SM_FBJD_Boy.glb',
-          scale: 0.03,
-        }),
+      // 确保查看器处于所需时间
+      const start = Cesium.JulianDate.fromDate(new Date(2018, 11, 12, 15));
+      const stop = Cesium.JulianDate.addSeconds(
+        start,
+        totalSecondsNo1,
+        new Cesium.JulianDate(),
       );
-      const labelGraphics = new Cesium.LabelGraphics({
-        text: new Cesium.CallbackProperty(updateSpeedLabel, false),
-        font: '20px sans-serif',
-        showBackground: true,
-        distanceDisplayCondition: new Cesium.DistanceDisplayCondition(
-          0.0,
-          100.0,
-        ),
-        eyeOffset: new Cesium.Cartesian3(0, 7.2, 0),
-      });
-      const modelLabel: Cesium.Entity = viewer.entities.add({
-        position: position,
-        // 自动将模型的方向设置为其面对的方向
-        orientation: new Cesium.VelocityOrientationProperty(position),
-        label: labelGraphics,
-      });
-      modelPrimitive.readyPromise.then(function (model: Cesium.Model) {
-        model.activeAnimations.addAll({
-          loop: Cesium.ModelAnimationLoop.REPEAT,
-          animationTime: function (duration: number) {
-            return distance.getValue(viewer.clock.currentTime) / duration;
-          },
-          multiplier: 0.25,
-        });
-        const rot = new Cesium.Matrix3();
-        viewer.scene.preUpdate.addEventListener(function () {
-          const time = viewer.clock.currentTime;
-          const pos = position.getValue(time);
-          const vel = velocityVectorProperty.getValue(time);
-          if (pos) {
-            Cesium.Cartesian3.normalize(vel, vel);
-            Cesium.Transforms.rotationMatrixFromPositionVelocity(
-              pos,
-              vel,
-              viewer.scene.globe.ellipsoid,
-              rot,
-            );
-            Cesium.Matrix4.fromRotationTranslation(rot, pos, model.modelMatrix);
-          }
-        });
-        toChangeUAV(
-          viewerRef.current,
-          modelRef.current,
-          modelHeadingRef.current,
-        );
-      });
+      const next = Cesium.JulianDate.addSeconds(
+        stop,
+        totalSecondsNo2,
+        new Cesium.JulianDate(),
+      );
+
+      viewer.clock.startTime = start.clone();
+      viewer.clock.stopTime = next.clone();
+      viewer.clock.currentTime = start.clone();
+      viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
+
+      countTrip(
+        startPosition,
+        endPosition,
+        start,
+        totalSecondsNo1,
+        position,
+        distance,
+      );
+      countTrip(
+        endPosition,
+        nextPosition,
+        stop,
+        totalSecondsNo2,
+        position,
+        distance,
+      );
+
+      console.warn(
+        '[velocityVectorProperty]:',
+        velocityVectorProperty._position._property._times,
+      );
+      console.warn('[position]:', position._property._times);
+      console.warn('[distance]:', distance._times);
+
+      const modelPrimitive: Cesium.Model = setModel(
+        viewer,
+        velocityVectorProperty,
+        position,
+        distance,
+      );
       modelRef.current = modelPrimitive;
+      const modelLabel: Cesium.Entity = setLabel(
+        viewer,
+        velocityVectorProperty,
+        position,
+      );
       viewer.trackedEntity = modelLabel;
-      // const hpRange = new Cesium.HeadingPitchRange();
-      // hpRange.heading = modelHeading;
-      // hpRange.pitch = Cesium.Math.toRadians(-5.0);
-      // hpRange.range = 50.0;
-      // let viewFromPos = new Cesium.Cartesian3(10.0, 10.0, 10.0);
-      // modelLabel.viewFrom = new Cesium.ConstantPositionProperty(viewFromPos);
       setIsLoadedViewer(true);
     }
   }, []);
@@ -295,9 +239,132 @@ export default function Map(props: any) {
     let geodesic = new Cesium.EllipsoidGeodesic();
     geodesic.setEndPoints(startPositionCartographic, endPositionCartographic);
     let distance = geodesic.surfaceDistance;
-    let speed = (5 * 1000) / 3600;
+    let speed = (5 * 1000) / 3600; // 5km/hour
     let seconds = Math.round(distance / speed);
     return seconds;
+  };
+
+  const countTrip = (
+    startPosition: Cesium.Cartesian3,
+    endPosition: Cesium.Cartesian3,
+    startTime: Cesium.JulianDate,
+    totalSeconds: number,
+    position: Cesium.SampledPositionProperty,
+    distance: Cesium.SampledProperty,
+  ) => {
+    let prevLocation = startPosition;
+    let totalDistance = 0;
+    for (let i = 0; i <= totalSeconds; ++i) {
+      const factor = i / totalSeconds;
+      const time = Cesium.JulianDate.addSeconds(
+        startTime, // 日期
+        factor * totalSeconds, // 添加或减去的秒数
+        new Cesium.JulianDate(),
+      );
+
+      // 使用非线性因子，使模型加速。
+      const locationFactor = Math.pow(factor, 1);
+      // 使用提供的笛卡尔坐标计算locationFactor处的线性插值或外推。
+      const location = Cesium.Cartesian3.lerp(
+        startPosition,
+        endPosition,
+        locationFactor,
+        new Cesium.Cartesian3(),
+      );
+      position.addSample(time, location);
+      // console.warn('totalDistance', totalDistance);
+      distance.addSample(
+        time,
+        (totalDistance += Cesium.Cartesian3.distance(location, prevLocation)),
+      );
+      prevLocation = location;
+    }
+  };
+
+  const setLabel = (
+    viewer: Cesium.Viewer,
+    velocityVectorProperty: Cesium.VelocityVectorProperty,
+    position: Cesium.SampledPositionProperty,
+  ): Cesium.Entity => {
+    const velocityVector = new Cesium.Cartesian3();
+    const labelGraphics = new Cesium.LabelGraphics({
+      text: new Cesium.CallbackProperty(
+        (time: Cesium.JulianDate) =>
+          updateSpeedLabel(
+            viewer,
+            velocityVectorProperty,
+            velocityVector,
+            time,
+          ),
+        false,
+      ),
+      font: '20px sans-serif',
+      showBackground: true,
+      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, 100.0),
+      eyeOffset: new Cesium.Cartesian3(0, 7.2, 0),
+    });
+    const modelLabel: Cesium.Entity = viewer.entities.add({
+      position: position,
+      // 自动将模型的方向设置为其面对的方向
+      orientation: new Cesium.VelocityOrientationProperty(position),
+      label: labelGraphics,
+    });
+    return modelLabel;
+  };
+
+  const setModel = (
+    viewer: Cesium.Viewer,
+    velocityVectorProperty: Cesium.VelocityVectorProperty,
+    position: Cesium.SampledPositionProperty,
+    distance: Cesium.SampledProperty,
+  ): Cesium.Model => {
+    const modelPrimitive: Cesium.Model = viewer.scene.primitives.add(
+      Cesium.Model.fromGltf({
+        url: './static/model/npc/SM_FBJD_Boy.glb',
+        scale: 0.03,
+      }),
+    );
+    modelPrimitive.readyPromise.then(function (model: Cesium.Model) {
+      model.activeAnimations.addAll({
+        loop: Cesium.ModelAnimationLoop.REPEAT,
+        animationTime: function (duration: number) {
+          return distance.getValue(viewer.clock.currentTime) / duration;
+        },
+        multiplier: 0.25,
+      });
+      const rot = new Cesium.Matrix3();
+      viewer.scene.preUpdate.addEventListener(function () {
+        const time = viewer.clock.currentTime;
+        const pos = position.getValue(time);
+        const vel = velocityVectorProperty.getValue(time);
+        if (pos) {
+          Cesium.Cartesian3.normalize(vel, vel);
+          Cesium.Transforms.rotationMatrixFromPositionVelocity(
+            pos,
+            vel,
+            viewer.scene.globe.ellipsoid,
+            rot,
+          );
+          Cesium.Matrix4.fromRotationTranslation(rot, pos, model.modelMatrix);
+        }
+      });
+      toChangeUAV(viewerRef.current, modelRef.current, modelHeadingRef.current);
+    });
+    return modelPrimitive;
+  };
+
+  const updateSpeedLabel = (
+    viewer: Cesium.Viewer,
+    velocityVectorProperty: Cesium.VelocityVectorProperty,
+    velocityVector: Cesium.Cartesian3,
+    time: Cesium.JulianDate,
+  ) => {
+    // 在提供的时间time获取属性的值velocityVector
+    velocityVectorProperty.getValue(time, velocityVector);
+    const metersPerSecond = Cesium.Cartesian3.magnitude(velocityVector); // 计算笛卡尔的大小（长度）
+    const kmPerHour = Math.round(metersPerSecond * 3.6);
+
+    return `${kmPerHour * viewer.clock.multiplier} km/hour`;
   };
 
   const toStart = (viewer: Cesium.Viewer) => {
