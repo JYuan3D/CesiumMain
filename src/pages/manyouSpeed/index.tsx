@@ -1,6 +1,10 @@
 import { Cesium } from '@sl-theia/vis';
 import { useEffect, useRef, useState } from 'react';
+import ReactDOMServer from 'react-dom/server';
+import PopupShijianXiangqing from './dom/PopupShijianXiangqing';
 import styles from './index.less';
+import ManyouPoint from './ManyouPoint';
+import Popup from './Popup/Popup';
 
 /**
  * [-117.02289249743924, 34.88879317755725]
@@ -41,8 +45,28 @@ export default function Map(props: any) {
   const cesiums = useRef<any>();
   const viewerRef = useRef<any>();
   const modelRef = useRef<any>();
+  const modelLabelRef = useRef<any>();
+  const modelListenerRef = useRef<any>();
   const modelHeadingRef = useRef<any>();
+  const manyouPointRef = useRef<any>();
+  const popupRef = useRef<any>();
+  popupRef.current = new Popup({});
   const [isLoadedViewer, setIsLoadedViewer] = useState(false);
+
+  const allPosition = [
+    {
+      lon: -117.02289249743924,
+      lat: 34.88879317755725,
+    },
+    {
+      lon: -117.02294361202779,
+      lat: 34.89180055567654,
+    },
+    {
+      lon: -117.01963074805985,
+      lat: 34.89172942227679,
+    },
+  ];
 
   useEffect(() => {
     if (!isLoadedViewer) {
@@ -83,103 +107,7 @@ export default function Map(props: any) {
         110.25,
         34.56,
       );
-
-      const startPosition = Cesium.Cartesian3.fromDegrees(
-        -117.02289249743924,
-        34.88879317755725,
-        0,
-      );
-      const endPosition = Cesium.Cartesian3.fromDegrees(
-        -117.02294361202779,
-        34.89180055567654,
-        0,
-      );
-      const nextPosition = Cesium.Cartesian3.fromDegrees(
-        -117.01963074805985,
-        34.89172942227679,
-        0,
-      );
-
-      setReferenceFrame(viewer, startPosition);
-      setPoint(viewer, startPosition);
-      setPoint(viewer, endPosition);
-      setPoint(viewer, nextPosition);
-      modelHeadingRef.current = getHeading(startPosition, endPosition);
-
-      let totalSecondsNo1 = countSeconds(startPosition, endPosition);
-      let totalSecondsNo2 = countSeconds(endPosition, nextPosition);
-      console.warn('[totalSecondsNo1]:', totalSecondsNo1);
-      console.warn('[totalSecondsNo2]:', totalSecondsNo2);
-
-      // 通过在两个位置之间移动，为我们的模型创建路径
-      // SampledPositionProperty:
-      // SampledPositionProperty和SampledProperty原理都是一样的
-      const position = new Cesium.SampledPositionProperty();
-      // SampledProperty:
-      // 用来通过给定多个不同时间点的Sample，然后在每两个时间点之间进行插值的一种Property，通常都会使用addSample方法添加不同时间点的值。
-      const distance = new Cesium.SampledProperty(Number);
-
-      // 速度矢量特性将给出实体在任何给定时间的速度和方向
-      const velocityVectorProperty = new Cesium.VelocityVectorProperty(
-        position,
-        false,
-      );
-
-      // 确保查看器处于所需时间
-      const start = Cesium.JulianDate.fromDate(new Date(2018, 11, 12, 15));
-      const stop = Cesium.JulianDate.addSeconds(
-        start,
-        totalSecondsNo1,
-        new Cesium.JulianDate(),
-      );
-      const next = Cesium.JulianDate.addSeconds(
-        stop,
-        totalSecondsNo2,
-        new Cesium.JulianDate(),
-      );
-
-      viewer.clock.startTime = start.clone();
-      viewer.clock.stopTime = next.clone();
-      viewer.clock.currentTime = start.clone();
-      viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
-
-      countTrip(
-        startPosition,
-        endPosition,
-        start,
-        totalSecondsNo1,
-        position,
-        distance,
-      );
-      countTrip(
-        endPosition,
-        nextPosition,
-        stop,
-        totalSecondsNo2,
-        position,
-        distance,
-      );
-
-      console.warn(
-        '[velocityVectorProperty]:',
-        velocityVectorProperty._position._property._times,
-      );
-      console.warn('[position]:', position._property._times);
-      console.warn('[distance]:', distance._times);
-
-      const modelPrimitive: Cesium.Model = setModel(
-        viewer,
-        velocityVectorProperty,
-        position,
-        distance,
-      );
-      modelRef.current = modelPrimitive;
-      const modelLabel: Cesium.Entity = setLabel(
-        viewer,
-        velocityVectorProperty,
-        position,
-      );
-      viewer.trackedEntity = modelLabel;
+      manyouPointRef.current = new ManyouPoint(viewer);
       setIsLoadedViewer(true);
     }
   }, []);
@@ -212,12 +140,24 @@ export default function Map(props: any) {
     );
   };
 
+  const setClock = (
+    viewer: Cesium.Viewer,
+    startTime: Cesium.JulianDate,
+    stopTime: Cesium.JulianDate,
+  ) => {
+    viewer.clock.startTime = startTime.clone();
+    viewer.clock.stopTime = stopTime.clone();
+    viewer.clock.currentTime = startTime.clone();
+    // viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
+    viewer.clock.clockRange = Cesium.ClockRange.CLAMPED;
+  };
+
   const setPoint = (viewer: Cesium.Viewer, position: Cesium.Cartesian3) => {
     viewer.entities.add({
       name: '定位点',
       position: position,
       billboard: {
-        image: require(`./point.png`),
+        image: require(`./img/point.png`),
         width: 29,
         height: 24,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
@@ -312,45 +252,103 @@ export default function Map(props: any) {
     return modelLabel;
   };
 
-  const setModel = (
+  const setPopup = (
     viewer: Cesium.Viewer,
-    velocityVectorProperty: Cesium.VelocityVectorProperty,
-    position: Cesium.SampledPositionProperty,
-    distance: Cesium.SampledProperty,
-  ): Cesium.Model => {
+    position: Cesium.Cartesian3,
+    createHtmlCb: Function,
+    openCb?: Function,
+    closeCb?: Function,
+  ) => {
+    popupRef.current.on('open', function () {
+      openCb && openCb();
+    });
+    popupRef.current.on('close', function () {
+      closeCb && closeCb();
+    });
+    popupRef.current.setPosition(position);
+    popupRef.current.setHTML(() => {
+      return createHtmlCb();
+    });
+    popupRef.current.addTo(viewer);
+    popupRef.current.setOffset([-200, 0]);
+  };
+
+  const setModel = (viewer: Cesium.Viewer): Cesium.Model => {
     const modelPrimitive: Cesium.Model = viewer.scene.primitives.add(
       Cesium.Model.fromGltf({
         url: './static/model/npc/SM_FBJD_Boy.glb',
         scale: 0.03,
       }),
     );
-    modelPrimitive.readyPromise.then(function (model: Cesium.Model) {
-      model.activeAnimations.addAll({
-        loop: Cesium.ModelAnimationLoop.REPEAT,
-        animationTime: function (duration: number) {
-          return distance.getValue(viewer.clock.currentTime) / duration;
-        },
-        multiplier: 0.25,
-      });
-      const rot = new Cesium.Matrix3();
-      viewer.scene.preUpdate.addEventListener(function () {
-        const time = viewer.clock.currentTime;
-        const pos = position.getValue(time);
-        const vel = velocityVectorProperty.getValue(time);
-        if (pos) {
-          Cesium.Cartesian3.normalize(vel, vel);
-          Cesium.Transforms.rotationMatrixFromPositionVelocity(
-            pos,
-            vel,
-            viewer.scene.globe.ellipsoid,
-            rot,
-          );
-          Cesium.Matrix4.fromRotationTranslation(rot, pos, model.modelMatrix);
-        }
-      });
-      toChangeUAV(viewerRef.current, modelRef.current, modelHeadingRef.current);
-    });
     return modelPrimitive;
+  };
+
+  const setModelAnimation = (
+    viewer: Cesium.Viewer,
+    model: Cesium.Model,
+    distance: Cesium.SampledProperty,
+  ) => {
+    model.activeAnimations.addAll({
+      loop: Cesium.ModelAnimationLoop.REPEAT,
+      animationTime: function (duration: number) {
+        return distance.getValue(viewer.clock.currentTime) / duration;
+      },
+      multiplier: 0.25,
+    });
+  };
+
+  const setModelListener = (
+    viewer: Cesium.Viewer,
+    model: Cesium.Model,
+    velocityVectorProperty: Cesium.VelocityVectorProperty,
+    position: Cesium.SampledPositionProperty,
+    manyouPoint: any,
+  ): any => {
+    const rot = new Cesium.Matrix3();
+    let eventListener = () => {
+      const time = viewer.clock.currentTime;
+      const pos = position.getValue(time);
+      const vel = velocityVectorProperty.getValue(time);
+      if (pos) {
+        if (viewer.clock.shouldAnimate) {
+          manyouPoint.render(
+            pos,
+            (order: boolean, position: Cesium.Cartesian3) => {
+              console.warn('order', order);
+              if (order) {
+                setPopup(
+                  viewer,
+                  position,
+                  () => {
+                    return ReactDOMServer.renderToStaticMarkup(
+                      <PopupShijianXiangqing />,
+                    );
+                  },
+                  () => {
+                    console.warn('打开');
+                  },
+                  () => {
+                    console.warn('关闭');
+                  },
+                );
+              } else {
+                popupRef.current.closeHander();
+              }
+            },
+          );
+        }
+        Cesium.Cartesian3.normalize(vel, vel);
+        Cesium.Transforms.rotationMatrixFromPositionVelocity(
+          pos,
+          vel,
+          viewer.scene.globe.ellipsoid,
+          rot,
+        );
+        Cesium.Matrix4.fromRotationTranslation(rot, pos, model.modelMatrix);
+      }
+    };
+    viewer.scene.preUpdate.addEventListener(eventListener);
+    return eventListener;
   };
 
   const updateSpeedLabel = (
@@ -367,12 +365,187 @@ export default function Map(props: any) {
     return `${kmPerHour * viewer.clock.multiplier} km/hour`;
   };
 
-  const toStart = (viewer: Cesium.Viewer) => {
+  const toStart = (viewer: Cesium.Viewer, allPosition: any[]) => {
+    // 通过在两个位置之间移动，为我们的模型创建路径
+    // SampledPositionProperty:
+    // SampledPositionProperty和SampledProperty原理都是一样的
+    const position = new Cesium.SampledPositionProperty();
+    // SampledProperty:
+    // 用来通过给定多个不同时间点的Sample，然后在每两个时间点之间进行插值的一种Property，通常都会使用addSample方法添加不同时间点的值。
+    const distance = new Cesium.SampledProperty(Number);
+
+    // 速度矢量特性将给出实体在任何给定时间的速度和方向
+    const velocityVectorProperty = new Cesium.VelocityVectorProperty(
+      position,
+      false,
+    );
+
+    const allPositionCartesian3: Cesium.Cartesian3[] = [];
+    allPosition.forEach((item: any, index: number) => {
+      const positionCartesian3 = Cesium.Cartesian3.fromDegrees(
+        item.lon,
+        item.lat,
+        0,
+      );
+      allPositionCartesian3.push(positionCartesian3);
+    });
+    const baitanPositionCartesian3Arr: Cesium.Cartesian3[] = [];
+    const yanjiePositionCartesian3Arr: Cesium.Cartesian3[] = [];
+    const lajiPositionCartesian3Arr: Cesium.Cartesian3[] = [];
+    for (let i = 0; i < allPosition.length; i++) {
+      if (i + 1 < allPosition.length) {
+        let startPosition = allPosition[i];
+        let nextPosition = allPosition[i + 1];
+        let newPosition = [
+          (startPosition.lon + nextPosition.lon) / 2 - 0.0001,
+          (startPosition.lat + nextPosition.lat) / 2,
+        ];
+        let baitanPositionCartesian3 = Cesium.Cartesian3.fromDegrees(
+          newPosition[0] - 0.0001,
+          newPosition[1] + 0.0001,
+          5,
+        );
+        baitanPositionCartesian3Arr.push(baitanPositionCartesian3);
+        let yanjiePositionCartesian3 = Cesium.Cartesian3.fromDegrees(
+          newPosition[0] + 0.0002,
+          newPosition[1] - 0.001,
+          5,
+        );
+        yanjiePositionCartesian3Arr.push(yanjiePositionCartesian3);
+        let lajiPositionCartesian3 = Cesium.Cartesian3.fromDegrees(
+          newPosition[0] + 0.0002,
+          newPosition[1] + 0.0001,
+          5,
+        );
+        lajiPositionCartesian3Arr.push(lajiPositionCartesian3);
+      }
+    }
+    manyouPointRef.current.addPointIcon(
+      baitanPositionCartesian3Arr,
+      '摆摊',
+      require(`./img/摆摊.png`),
+    );
+    manyouPointRef.current.addPointIcon(
+      yanjiePositionCartesian3Arr,
+      '沿街',
+      require(`./img/沿街.png`),
+    );
+    // manyouPointRef.current.addPointIcon(
+    //   lajiPositionCartesian3Arr,
+    //   '垃圾',
+    //   require(`./img/垃圾.png`),
+    // );
+
+    setReferenceFrame(viewer, allPositionCartesian3[0]);
+    allPositionCartesian3.forEach((item: Cesium.Cartesian3) => {
+      setPoint(viewer, item);
+    });
+    modelHeadingRef.current = getHeading(
+      allPositionCartesian3[0],
+      allPositionCartesian3[1],
+    );
+
+    let startTime = Cesium.JulianDate.fromDate(new Date(2018, 11, 12, 15));
+    let nextTime = startTime.clone();
+    let stopTime = startTime.clone();
+    for (let i = 0; i < allPositionCartesian3.length; i++) {
+      if (i + 1 < allPositionCartesian3.length) {
+        let totalSeconds = countSeconds(
+          allPositionCartesian3[i],
+          allPositionCartesian3[i + 1],
+        );
+        countTrip(
+          allPositionCartesian3[i],
+          allPositionCartesian3[i + 1],
+          nextTime,
+          totalSeconds,
+          position,
+          distance,
+        );
+        nextTime = Cesium.JulianDate.addSeconds(
+          nextTime,
+          totalSeconds,
+          new Cesium.JulianDate(),
+        );
+        stopTime = nextTime.clone();
+      }
+    }
+
+    setClock(viewer, startTime, stopTime);
+
+    // console.warn(
+    //   '[velocityVectorProperty]:',
+    //   velocityVectorProperty._position._property._times,
+    // );
+    // console.warn('[position]:', position._property._times);
+    // console.warn('[distance]:', distance._times);
+
+    const modelPrimitive: Cesium.Model = setModel(viewer);
+    modelPrimitive.readyPromise.then(function (model: Cesium.Model) {
+      setModelAnimation(viewer, model, distance);
+      const modelListener = setModelListener(
+        viewer,
+        model,
+        velocityVectorProperty,
+        position,
+        manyouPointRef.current,
+      );
+      modelRef.current = model;
+      modelListenerRef.current = modelListener;
+      toChangeUAV(viewer, model, modelHeadingRef.current);
+    });
+    const modelLabel: Cesium.Entity = setLabel(
+      viewer,
+      velocityVectorProperty,
+      position,
+    );
+    modelLabelRef.current = modelLabel;
+    viewer.trackedEntity = modelLabel;
+    viewer.clock.shouldAnimate = true;
+
+    // viewer.clock.onTick.addEventListener(() => {
+    //   if (viewer.clock.shouldAnimate) {
+    //     const time = viewer.clock.currentTime;
+    //     const pos = position.getValue(time);
+    //   }
+    // });
+    // 5.057010116276572  4.342459780324267
+    // 1.0159780860953358 5.320513304285946
+    console.warn(
+      'Cesium.Math.toRadians(-5.0)',
+      Cesium.Math.toRadians(0.0),
+      Cesium.Math.toRadians(90.0),
+    );
+    console.warn(
+      'Cesium.Math.toRadians(-5.0)',
+      Cesium.Math.toRadians(180),
+      Cesium.Math.toRadians(360),
+    );
+    viewer.clock.onStop.addEventListener(() => {
+      console.warn('结束巡航...........');
+    });
+  };
+
+  const toGoon = (viewer: Cesium.Viewer) => {
     viewer.clock.shouldAnimate = true;
   };
 
   const toStop = (viewer: Cesium.Viewer) => {
     viewer.clock.shouldAnimate = false;
+  };
+
+  const toCancel = (
+    viewer: Cesium.Viewer,
+    model: Cesium.Model,
+    modelLabel: Cesium.Entity,
+    modelListener: any,
+  ) => {
+    viewer.trackedEntity = undefined;
+    viewer.clock.shouldAnimate = false;
+    toChangeSpeed(viewer, 1);
+    viewer.scene.primitives.remove(model);
+    viewer.entities.remove(modelLabel);
+    viewer.scene.preUpdate.removeEventListener(modelListener);
   };
 
   const toChangeMan = (
@@ -415,12 +588,32 @@ export default function Map(props: any) {
     viewer.clock.multiplier = 1 * value;
   };
 
+  const toClosePopup = (popup: any) => {
+    console.warn('[Popup]:', popup);
+    popup.closeHander();
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.cesium} ref={cesiums}></div>
       <div className={styles.btnWrap} style={{ top: 8 }}>
-        <button onClick={() => toStart(viewerRef.current)}>开始</button>
+        <button onClick={() => toStart(viewerRef.current, allPosition)}>
+          启动
+        </button>
+        <button onClick={() => toGoon(viewerRef.current)}>继续</button>
         <button onClick={() => toStop(viewerRef.current)}>暂停</button>
+        <button
+          onClick={() =>
+            toCancel(
+              viewerRef.current,
+              modelRef.current,
+              modelLabelRef.current,
+              modelListenerRef.current,
+            )
+          }
+        >
+          取消
+        </button>
         <button
           onClick={() =>
             toChangeMan(
@@ -447,6 +640,7 @@ export default function Map(props: any) {
         <button onClick={() => toChangeSpeed(viewerRef.current, 2)}>2x</button>
         <button onClick={() => toChangeSpeed(viewerRef.current, 3)}>3x</button>
         <button onClick={() => toChangeSpeed(viewerRef.current, 4)}>4x</button>
+        <button onClick={() => toClosePopup(popupRef.current)}>关闭弹窗</button>
       </div>
     </div>
   );
