@@ -1,9 +1,21 @@
+import { forwardRef } from 'react';
 import Wrap from '../Warp';
 import styles from './index.less';
-const Popup: React.FC<any> = ({ data = {}, onClose }) => {
+
+export interface PopupProps {
+  /** 根类名 */
+  wrapClassName?: string;
+  wrapStyle?: object;
+  // 关闭事件
+  onClose?: (id?: string | number) => void;
+}
+
+const Popup = ({ wrapClassName, wrapStyle, onClose }: PopupProps, ref: any) => {
   return (
     <Wrap
-      wrapClassName={styles.wrap}
+      ref={ref}
+      wrapClassName={`${styles.wrap} ${wrapClassName}`}
+      wrapStyle={wrapStyle}
       bodyClassName={styles.body}
       title="事件详情"
       width={366.9}
@@ -41,19 +53,33 @@ const Popup: React.FC<any> = ({ data = {}, onClose }) => {
       <div className={styles.line}></div>
       <div className={styles.buttonWrap}>
         <div className={styles.buttonLine}>
-          <div className={styles.button}>待核实</div>
+          <div className={styles.button} onClick={() => console.warn('待核实')}>
+            待核实
+          </div>
         </div>
         <div className={styles.buttonLine}>
-          <div className={styles.button}>已上报</div>
+          <div className={styles.button} onClick={() => console.warn('已上报')}>
+            已上报
+          </div>
         </div>
         <div className={styles.buttonLine}>
-          <div className={`${styles.button} ${styles.handling}`}>处置中</div>
+          <div
+            className={`${styles.button} ${styles.handling}`}
+            onClick={() => console.warn('处置中')}
+          >
+            处置中
+          </div>
         </div>
         <div className={styles.buttonLine}>
-          <div className={`${styles.button} ${styles.handled}`}>已闭环</div>
+          <div
+            className={`${styles.button} ${styles.handled}`}
+            onClick={() => console.warn('已闭环')}
+          >
+            已闭环
+          </div>
         </div>
       </div>
     </Wrap>
   );
 };
-export default Popup;
+export default forwardRef(Popup);

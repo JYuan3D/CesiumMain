@@ -1,8 +1,10 @@
+import { forwardRef } from 'react';
 import styles from './index.less';
 
 export interface WrapProps {
   /** 根类名 */
   wrapClassName?: string;
+  wrapStyle?: object;
   /** 主类名 */
   bodyClassName?: string;
   // 标题
@@ -18,29 +20,42 @@ export interface WrapProps {
   children?: any;
 }
 
-const Wrap: React.FC<WrapProps> = ({
-  wrapClassName,
-  bodyClassName,
-  title,
-  bg = require(`./resources/bg.png`),
-  onClose,
-  id,
-  width = 200,
-  height = 'auto',
-  children,
-}) => {
+const Wrap = (
+  {
+    wrapClassName,
+    wrapStyle,
+    bodyClassName,
+    title,
+    bg = require(`./resources/bg.png`),
+    onClose,
+    id,
+    width = 200,
+    height = 'auto',
+    children,
+  }: WrapProps,
+  ref: any,
+) => {
   return (
     <div
+      ref={ref}
       className={`${styles.wrap} ${wrapClassName}`}
-      style={{ width, height, backgroundImage: `url(${bg})` }}
+      style={{
+        ...{ width, height, backgroundImage: `url(${bg})` },
+        ...wrapStyle,
+      }}
     >
       <div className={styles.header}>
         {title}
-        {onClose && <img src={require(`./resources/close.png`)} onClick={() => onClose?.(id)} />}
+        {onClose && (
+          <img
+            src={require(`./resources/close.png`)}
+            onClick={() => onClose?.(id)}
+          />
+        )}
       </div>
       <div className={`${styles.body} ${bodyClassName}`}>{children}</div>
     </div>
   );
 };
 
-export default Wrap;
+export default forwardRef(Wrap);
