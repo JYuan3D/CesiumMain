@@ -4,6 +4,6 @@
 import * as Cesium from 'cesium';
 
 window.CESIUM_BASE_URL = '/Cesium';
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3NTRhMmI1NS0yZmRmLTRhMGMtOTYxNi04OTM3OGVkYTRjYjYiLCJpZCI6OTczMDAsImlhdCI6MTY1NTEwNzI1NH0.LB89i36BMZMVOmOhTJ5DkVGGbEX4RSKaXUgbDTxQkoo';
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0NTkyNGVkMi04YTg1LTQ4YzktYTI3MS05NTNiZWM3MTg2ZGEiLCJpZCI6MjU5LCJpYXQiOjE2NjQ4MTQyODl9.mGZTN2DeKa-mQnQr6BInj8GzOK6wq3dZMwcyU0iwInA';
 
 export { Cesium };
