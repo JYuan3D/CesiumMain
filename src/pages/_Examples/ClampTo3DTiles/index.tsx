@@ -24,6 +24,7 @@ export default function Map(props: any) {
       );
 
       viewer.dataSources.add(dataSourcePromise).then(function (dataSource) {
+        console.warn("123")
         entity = dataSource.entities.getById('CesiumMilkTruck');
         positionProperty = entity!.position;
       });
@@ -33,7 +34,7 @@ export default function Map(props: any) {
           url: Cesium.IonResource.fromAssetId(40866),
         }),
       );
-      console.warn('[tileset]:', tileset);
+      // console.warn('[tileset]:', tileset);
 
       viewer.camera.setView({
         destination: new Cesium.Cartesian3(
@@ -60,7 +61,7 @@ export default function Map(props: any) {
         const objectsToExclude = [entity];
         scene.postRender.addEventListener(function () {
           const position = positionProperty!.getValue(clock.currentTime);
-          // console.warn('[position]:', position);
+          // console.warn('[position]:', position.z);
           // @ts-ignore;
           entity.position = scene.clampToHeight(position, objectsToExclude);
         });

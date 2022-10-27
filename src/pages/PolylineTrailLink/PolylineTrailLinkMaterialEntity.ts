@@ -1,24 +1,18 @@
 import { Cesium } from '@sl-theia/vis';
-
 import PolylineTrailLinkMaterialProperty from './PolylineTrailLinkMaterialProperty';
 
-Cesium.PolylineTrailLinkMaterialProperty = PolylineTrailLinkMaterialProperty;
-
 const PolylineTrailLinkType = 'PolylineTrailLink';
-
-const PolylineTrailLinkImage = './colors.png';
-
+const PolylineTrailLinkImage = './static/img/link/colors.png';
 const PolylineTrailLinkSource =
   'czm_material czm_getMaterial(czm_materialInput materialInput)\n\
-    {\n\
-          czm_material material = czm_getDefaultMaterial(materialInput);\n\
-          vec2 st = materialInput.st;\n\
-          vec4 colorImage = texture2D(image, vec2(fract(st.s - time), st.t));\n\
-          material.alpha = colorImage.a * color.a;\n\
-          material.diffuse = (colorImage.rgb+color.rgb)/2.0;\n\
-          return material;\n\
-      }';
-
+  {\n\
+    czm_material material = czm_getDefaultMaterial(materialInput);\n\
+    vec2 st = materialInput.st;\n\
+    vec4 colorImage = texture2D(image, vec2(fract(st.s - time), st.t));\n\
+    material.alpha = colorImage.a * color.a;\n\
+    material.diffuse = (colorImage.rgb+color.rgb)/2.0;\n\
+    return material;\n\
+  }';
 Cesium.Material._materialCache.addMaterial(PolylineTrailLinkType, {
   fabric: {
     type: PolylineTrailLinkType,
@@ -55,7 +49,7 @@ class PolylineTrailLinkMaterialEntity {
           24.28096440338249, 1000, 134.08730679410138, 49.149581652474076, 1000,
         ]),
         width: 15,
-        material: new Cesium.PolylineTrailLinkMaterialProperty(
+        material: new PolylineTrailLinkMaterialProperty(
           Cesium.Color.ORANGE,
           3000,
         ),

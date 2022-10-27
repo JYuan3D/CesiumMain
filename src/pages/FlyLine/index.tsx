@@ -1,7 +1,8 @@
 import { Cesium } from '@sl-theia/vis';
 import { useEffect, useRef, useState } from 'react';
+import { computeFlyline } from './computeFlyline';
 import styles from './index.less';
-import PolylineTrailLinkMaterialEntity from './PolylineTrailLinkMaterialEntity';
+import { setFlylineMaterial } from './setFlylineMaterial';
 
 export default function Map(props: any) {
   const cesiums = useRef<any>();
@@ -48,16 +49,33 @@ export default function Map(props: any) {
       );
       // 设置初始位置
       viewer.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(110.2, 34.55, 3000000),
+        destination: Cesium.Cartesian3.fromDegrees(110.2, 34.55, 4000000),
       });
 
-      const polylineTrailLinkMaterialEntity =
-        new PolylineTrailLinkMaterialEntity(viewer);
-      viewer.entities.add(polylineTrailLinkMaterialEntity.instance);
-
+      addFlyline(viewer);
       setIsLoadedViewer(true);
     }
   }, []);
+
+  const addFlyline = (viewer: Cesium.Viewer) => {
+    // 创建长方体对象
+    const PolylineGeometry = new Cesium.PolylineGeometry({
+      positions: computeFlyline(),
+      width: 2,
+    });
+    const instance = new Cesium.GeometryInstance({
+      geometry: PolylineGeometry,
+      id: 'flyline',
+    });
+    viewer.scene.primitives.add(
+      new Cesium.Primitive({
+        geometryInstances: [instance],
+        appearance: setFlylineMaterial(),
+        releaseGeometryInstances: false,
+        compressVertices: false,
+      }),
+    );
+  };
 
   return <div className={styles.container} ref={cesiums}></div>;
 }
