@@ -41,9 +41,6 @@ export default function Map(props: any) {
         navigationHelpButton: false, //是否显示帮助信息控件
         infoBox: false, //是否显示点击要素之后显示的信息
         fullscreenButton: false,
-        imageryProvider: new Cesium.UrlTemplateImageryProvider({
-          url: 'https://webst02.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
-        }),
       });
       viewerRef.current = viewer;
       setIsLoadedViewer(true);
@@ -58,9 +55,9 @@ export default function Map(props: any) {
       // drawEllipseCube(viewer); // 绘制椭圆形立方体
       // drawRoundCube(viewer); // 绘制圆形立方体
       // drawRadiiEllipseCub(viewer); // 绘制球体
-      drawWall(viewer);
+      // drawWall(viewer, [-95.0, 50.0], 206, 168);
       // drawHuiWord(viewer);
-      // drawFence(viewer);
+      drawFence(viewer);
     }
   }, []);
 
@@ -90,8 +87,13 @@ export default function Map(props: any) {
     viewer.zoomTo(rectangleEntity);
   };
 
-  const drawWall = (viewer: Cesium.Viewer) => {
-    let image = new Image(206, 168);
+  const drawWall = (
+    viewer: Cesium.Viewer,
+    origin: number[],
+    imageWidth: number,
+    imageHeight: number,
+  ) => {
+    let image = new Image(imageWidth, imageHeight);
     image.src = './static/img/bubble/body_light.png';
 
     let fenceImageMaterialProperty = new Cesium.ImageMaterialProperty({
@@ -100,31 +102,31 @@ export default function Map(props: any) {
       transparent: true,
     });
 
-    const point_1 = Cesium.Cartesian3.fromDegrees(-95.0, 50.0); // 原点
-    const point_2 = ByDirectionAndLen(point_1, 90, 206 / 2); // 右点（东边）
+    const point_1 = Cesium.Cartesian3.fromDegrees(origin[0], origin[1]); // 原点
+    const point_2 = ByDirectionAndLen(point_1, 90, imageWidth / 2); // 右点（东边）
     let cartographic_2 = Cesium.Cartographic.fromCartesian(point_2);
     let longitude_2 = Cesium.Math.toDegrees(cartographic_2.longitude);
 
-    const point_3 = ByDirectionAndLen(point_1, 270, 206 / 2); // 左点（西边）
+    const point_3 = ByDirectionAndLen(point_1, 270, imageWidth / 2); // 左点（西边）
     let cartographic_3 = Cesium.Cartographic.fromCartesian(point_3);
     let longitude_3 = Cesium.Math.toDegrees(cartographic_3.longitude);
 
-    const point_4 = ByDirectionAndLen(point_1, 0, 206 / 2 - 2); // 上点（北边）
+    const point_4 = ByDirectionAndLen(point_1, 0, imageWidth / 2); // 上点（北边）
     let cartographic_4 = Cesium.Cartographic.fromCartesian(point_4);
     let latitude_4 = Cesium.Math.toDegrees(cartographic_4.latitude);
 
-    const point_5 = ByDirectionAndLen(point_1, 180, 206 / 2 + 2); // 下点（南边）
+    const point_5 = ByDirectionAndLen(point_1, 180, imageWidth / 2); // 下点（南边）
     let cartographic_5 = Cesium.Cartographic.fromCartesian(point_5);
     let latitude_5 = Cesium.Math.toDegrees(cartographic_5.latitude);
 
     let wallGraphics_front = new Cesium.WallGraphics({
       positions: Cesium.Cartesian3.fromDegreesArray([
         longitude_3,
-        50.0,
+        origin[1],
         longitude_2,
-        50.0,
+        origin[1],
       ]),
-      maximumHeights: [168, 168],
+      maximumHeights: [imageHeight, imageHeight],
       minimumHeights: [0, 0],
       outline: false,
       outlineColor: Cesium.Color.LIGHTGRAY,
@@ -133,16 +135,14 @@ export default function Map(props: any) {
     });
     let wallGraphics_side = new Cesium.WallGraphics({
       positions: Cesium.Cartesian3.fromDegreesArray([
-        -95.0 + 0.00004,
+        origin[0],
         latitude_4,
-        -95.0 + 0.00004,
+        origin[0],
         latitude_5,
       ]),
-      maximumHeights: [168, 168],
+      maximumHeights: [imageHeight, imageHeight],
       minimumHeights: [0, 0],
       outline: false,
-      outlineColor: Cesium.Color.LIGHTGRAY,
-      outlineWidth: 4,
       material: fenceImageMaterialProperty,
     });
     let wallEntity_front = new Cesium.Entity({
@@ -157,18 +157,19 @@ export default function Map(props: any) {
   };
 
   const drawFence = (viewer: Cesium.Viewer) => {
-    let image = new Image(206, 168);
-    image.src = './static/img/bubble/body_light.png';
+    let image = new Image(512, 512);
+    image.src = require('./wall.png');
 
     let fenceImageMaterialProperty = new Cesium.ImageMaterialProperty({
       image: image,
-      repeat: new Cesium.Cartesian2(1, 1),
+      repeat: new Cesium.Cartesian2(2000, 1),
+      transparent: true,
     });
 
     let fenceWallGraphics = new Cesium.WallGraphics({
       positions: Cesium.Cartesian3.fromDegreesArrayHeights([
-        -90.0, 43.0, 100000.0, -87.5, 45.0, 100000.0, -85.0, 43.0, 100000.0,
-        -87.5, 41.0, 100000.0, -90.0, 43.0, 100000.0,
+        -90.0, 43.0, 512, -87.5, 45.0, 512, -85.0, 43.0, 512, -87.5, 41.0, 512,
+        -90.0, 43.0, 512,
       ]),
       material: fenceImageMaterialProperty,
     });

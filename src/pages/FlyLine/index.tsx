@@ -11,12 +11,7 @@ export default function Map(props: any) {
 
   useEffect(() => {
     if (!isLoadedViewer) {
-      let osm = new Cesium.OpenStreetMapImageryProvider({
-        url: 'https://a.tile.openstreetmap.org/',
-      });
-
       const viewer = new Cesium.Viewer(cesiums.current, {
-        imageryProvider: osm,
         contextOptions: {
           webgl: {
             alpha: true,
