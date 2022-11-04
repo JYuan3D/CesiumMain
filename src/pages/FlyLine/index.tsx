@@ -1,7 +1,8 @@
 import { Cesium } from '@sl-theia/vis';
 import { useEffect, useRef, useState } from 'react';
+import { computeFlyline } from './computeFlyline';
 import styles from './index.less';
-import PolylineTrailLinkMaterialEntity from './PolylineTrailLinkMaterialEntity';
+import { setFlylineMaterial } from './setFlylineMaterial';
 
 export default function Map(props: any) {
   const cesiums = useRef<any>();
@@ -10,7 +11,12 @@ export default function Map(props: any) {
 
   useEffect(() => {
     if (!isLoadedViewer) {
+      let osm = new Cesium.OpenStreetMapImageryProvider({
+        url: 'https://a.tile.openstreetmap.org/',
+      });
+
       const viewer = new Cesium.Viewer(cesiums.current, {
+        imageryProvider: osm,
         contextOptions: {
           webgl: {
             alpha: true,
@@ -43,22 +49,33 @@ export default function Map(props: any) {
       );
       // 设置初始位置
       viewer.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(110.2, 34.55, 3000000),
+        destination: Cesium.Cartesian3.fromDegrees(110.2, 34.55, 4000000),
       });
 
-      const polylineTrailLinkMaterialEntity =
-        new PolylineTrailLinkMaterialEntity(
-          viewer,
-          Cesium.Cartesian3.fromDegreesArrayHeights([
-            78.14473433271054, 39.519094301687126, 0, 108.29490332070186,
-            24.28096440338249, 0, 134.08730679410138, 49.149581652474076, 0,
-          ]),
-        );
-      viewer.entities.add(polylineTrailLinkMaterialEntity.instance);
-
+      addFlyline(viewer);
       setIsLoadedViewer(true);
     }
   }, []);
+
+  const addFlyline = (viewer: Cesium.Viewer) => {
+    // 创建长方体对象
+    const PolylineGeometry = new Cesium.PolylineGeometry({
+      positions: computeFlyline(),
+      width: 2,
+    });
+    const instance = new Cesium.GeometryInstance({
+      geometry: PolylineGeometry,
+      id: 'flyline',
+    });
+    viewer.scene.primitives.add(
+      new Cesium.Primitive({
+        geometryInstances: [instance],
+        appearance: setFlylineMaterial(),
+        releaseGeometryInstances: false,
+        compressVertices: false,
+      }),
+    );
+  };
 
   return <div className={styles.container} ref={cesiums}></div>;
 }
