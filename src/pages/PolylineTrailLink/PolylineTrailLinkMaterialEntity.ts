@@ -31,26 +31,23 @@ Cesium.Material._materialCache.addMaterial(PolylineTrailLinkType, {
 class PolylineTrailLinkMaterialEntity {
   viewer: Cesium.Viewer;
   instance: Cesium.Entity | undefined;
-  constructor(viewer: Cesium.Viewer) {
+  constructor(viewer: Cesium.Viewer, positions: Cesium.Cartesian3[]) {
     this.viewer = viewer;
-    this.initInstance();
+    this.initInstance(positions);
   }
 
-  initInstance() {
-    this.instance = this.setInstance();
+  initInstance(positions: Cesium.Cartesian3[]) {
+    this.instance = this.setInstance(positions);
   }
 
-  setInstance(): Cesium.Entity {
+  setInstance(positions: Cesium.Cartesian3[]): Cesium.Entity {
     let entity = new Cesium.Entity({
       name: 'PolylineTrail',
       polyline: {
-        positions: Cesium.Cartesian3.fromDegreesArrayHeights([
-          78.14473433271054, 39.519094301687126, 1000, 108.29490332070186,
-          24.28096440338249, 1000, 134.08730679410138, 49.149581652474076, 1000,
-        ]),
-        width: 15,
+        positions: positions,
+        width: 10,
         material: new PolylineTrailLinkMaterialProperty(
-          Cesium.Color.ORANGE,
+          Cesium.Color.GREEN,
           3000,
         ),
       },

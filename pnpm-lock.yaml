@@ -14,6 +14,7 @@ specifiers:
   '@umijs/fabric': 2.6.4
   '@vises/vis-plugin-cesium': 1.1.1
   antd: ^4.23.1
+  cesium-heatmap-es6: ^0.5.0
   cross-env: ^7.0.3
   eslint: ^7.32.0
   gsap: ^3.10.4
@@ -44,6 +45,7 @@ dependencies:
   '@types/three': 0.142.0
   '@vises/vis-plugin-cesium': 1.1.1_hxeiylw4vxcwcpjb6fscvnwrem
   antd: 4.23.1_ef5jwxihqo6n7gxfmzogljlgcm
+  cesium-heatmap-es6: 0.5.0
   gsap: 3.10.4
   leva: 0.9.28_ef5jwxihqo6n7gxfmzogljlgcm
   mapbox-gl: 2.9.1
@@ -4681,6 +4683,12 @@ packages:
   /ccount/1.1.0:
     resolution: {integrity: sha512-vlNK021QdI7PNeiUh/lKkC/mNHHfV0m/Ad5JoI0TYtlBnJAslM/JIkm/tGC88bkLIwO6OQ5uV6ztS6kVAtCDlg==}
     dev: true
+
+  /cesium-heatmap-es6/0.5.0:
+    resolution: {integrity: sha512-0Etk3A8qlDTXXDvdnXUv8ecLjta2eCzIb4IhdtxuI+aIzxNV+Bx9fstQmFhYQcM0vRAjnn/uEsH8A0cgsHAqTg==}
+    dependencies:
+      cesium: 1.94.3
+    dev: false
 
   /cesium/1.94.3:
     resolution: {integrity: sha512-F4/gP1pYkE4tNE/Z5v13Sw4QeTJ3QuvxpIxM7spJmHKI2AutbTjfPp3yXQCaorFAS44eGLUkIyV/mTR8YD3/HA==}
@@ -13599,6 +13607,7 @@ packages:
   /unified/6.2.0:
     resolution: {integrity: sha512-1k+KPhlVtqmG99RaTbAv/usu85fcSRu3wY8X+vnsEhIxNP5VbVIDiXnLqyKIG+UMdyTg0ZX9EI6k2AfjJkHPtA==}
     dependencies:
+      '@types/unist': 2.0.6
       bail: 1.0.5
       extend: 3.0.2
       is-plain-obj: 1.1.0
@@ -13623,6 +13632,7 @@ packages:
   /unified/9.2.2:
     resolution: {integrity: sha512-Sg7j110mtefBD+qunSLO1lqOEKdrwBFBrR6Qd8f4uwkhWNlbkaqwHse6e7QvD3AP/MNoJdEDLaf8OxYyoWgorQ==}
     dependencies:
+      '@types/unist': 2.0.6
       bail: 1.0.5
       extend: 3.0.2
       is-buffer: 2.0.5

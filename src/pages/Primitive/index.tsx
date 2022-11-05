@@ -1,5 +1,6 @@
 import { Cesium } from '@sl-theia/vis';
 import { useEffect, useRef, useState } from 'react';
+// import { drawRectangle } from './Draw/surface';
 import styles from './index.less';
 
 //参数为什么类型,可根据函数API去传参
@@ -43,9 +44,48 @@ export default function Map(props: any) {
       });
       viewerRef.current = viewer;
       setIsLoadedViewer(true);
+
+      // drawRectangle(viewer); // 绘制矩形
+      // drawPolygon(viewer); // 绘制多边形
+      // drawEllipse(viewer); // 绘制椭圆形
+      // drawRound(viewer); // 绘制圆形
+      // drawBoxCube(viewer); // 绘制盒形立方体
+      // drawRectangleCube(viewer); // 绘制矩形立方体
+      // drawRoundCube(viewer); // 绘制多边形立方体
+      // drawEllipseCube(viewer); // 绘制椭圆形立方体
+      // drawRoundCube(viewer); // 绘制圆形立方体
+      // drawRadiiEllipseCub(viewer); // 绘制球体
       drawWall(viewer, [-95.0, 50.0], 510, 920);
+      // drawHuiWord(viewer);
+      // drawFence(viewer);
     }
   }, []);
+
+  const drawRectangle = (viewer: Cesium.Viewer) => {
+    let image = new Image(206, 168);
+    image.src = './static/img/bubble/body_light.png';
+
+    let fenceImageMaterialProperty = new Cesium.ImageMaterialProperty({
+      image: image,
+      repeat: new Cesium.Cartesian2(1, 1),
+    });
+
+    let rectangleGraphics = new Cesium.RectangleGraphics({
+      coordinates: Cesium.Rectangle.fromDegrees(116.8, 36.1, 116.9, 36.2), // 最西、最南、最东、最北
+      outline: true,
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 4,
+      stRotation: Cesium.Math.toRadians(0), // 一个数值属性，指定矩形纹理从北逆时针旋转
+      material: fenceImageMaterialProperty,
+    });
+
+    let rectangleEntity = new Cesium.Entity({
+      rectangle: rectangleGraphics,
+    });
+
+    viewer.entities.add(rectangleEntity);
+    viewer.zoomTo(rectangleEntity);
+  };
 
   const drawWall = (
     viewer: Cesium.Viewer,
@@ -109,6 +149,8 @@ export default function Map(props: any) {
       maximumHeights: [imageHeight, imageHeight],
       minimumHeights: [0, 0],
       outline: false,
+      outlineColor: Cesium.Color.LIGHTGRAY,
+      outlineWidth: 4,
       material: fenceImageMaterialProperty,
     });
     let wallEntity_front = new Cesium.Entity({
@@ -116,19 +158,6 @@ export default function Map(props: any) {
     });
 
     viewer.entities.add(wallEntity_front);
-
-    let wallInstance1 = new Cesium.GeometryInstance({
-      geometry: Cesium.WallGeometry.fromConstantHeights({
-        positions: Cesium.Cartesian3.fromDegreesArray([
-          origin[0],
-          latitude_4,
-          origin[0],
-          latitude_5,
-        ]),
-        maximumHeight: imageHeight,
-        minimumHeight: 0.0,
-      }),
-    });
     let wallInstance2 = new Cesium.GeometryInstance({
       geometry: Cesium.WallGeometry.fromConstantHeights({
         positions: Cesium.Cartesian3.fromDegreesArray([
@@ -152,6 +181,68 @@ export default function Map(props: any) {
     viewer.scene.primitives.add(Primitive);
 
     viewer.zoomTo(wallEntity_front);
+  };
+
+  const drawFence = (viewer: Cesium.Viewer) => {
+    let image = new Image(512, 512);
+    image.src = require('./wall2.png');
+
+    let fenceImageMaterialProperty = new Cesium.ImageMaterialProperty({
+      image: image,
+      repeat: new Cesium.Cartesian2(2000, 1),
+      transparent: true,
+    });
+
+    let fenceWallGraphics = new Cesium.WallGraphics({
+      positions: Cesium.Cartesian3.fromDegreesArrayHeights([
+        -90.0, 43.0, 512, -87.5, 45.0, 512, -85.0, 43.0, 512, -87.5, 41.0, 512,
+        -90.0, 43.0, 512,
+      ]),
+      material: fenceImageMaterialProperty,
+    });
+
+    let fenceWallEntity = new Cesium.Entity({
+      wall: fenceWallGraphics,
+    });
+
+    viewer.entities.add(fenceWallEntity);
+    viewer.zoomTo(fenceWallEntity);
+  };
+
+  const drawWall2 = (viewer, positions) => {
+    positions = [...positions, positions[0], positions[1]];
+
+    let image = require('./wall2.png');
+    var wallInstance = new Cesium.GeometryInstance({
+      geometry: Cesium.WallGeometry.fromConstantHeights({
+        positions: Cesium.Cartesian3.fromDegreesArray(positions),
+        maximumHeight: 100.0,
+        minimumHeight: 20.0,
+        // vertexFormat: Cesium.MaterialAppearance.VERTEX_FORMAT,
+      }),
+    });
+
+    let material = new Cesium.Material({
+      fabric: {
+        type: 'EmissionMap',
+        uniforms: {
+          image: image,
+        },
+      },
+      translucent: function () {
+        return true;
+      },
+    });
+
+    const Primitive = new Cesium.Primitive({
+      geometryInstances: [wallInstance],
+      appearance: new Cesium.MaterialAppearance({
+        material: material,
+      }),
+    });
+    viewer.scene.primitives.add(Primitive);
+
+    return Primitive;
   };
 
   return (

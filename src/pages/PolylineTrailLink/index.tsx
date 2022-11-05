@@ -10,12 +10,7 @@ export default function Map(props: any) {
 
   useEffect(() => {
     if (!isLoadedViewer) {
-      let osm = new Cesium.OpenStreetMapImageryProvider({
-        url: 'https://a.tile.openstreetmap.org/',
-      });
-
       const viewer = new Cesium.Viewer(cesiums.current, {
-        imageryProvider: osm,
         contextOptions: {
           webgl: {
             alpha: true,
@@ -52,7 +47,13 @@ export default function Map(props: any) {
       });
 
       const polylineTrailLinkMaterialEntity =
-        new PolylineTrailLinkMaterialEntity(viewer);
+        new PolylineTrailLinkMaterialEntity(
+          viewer,
+          Cesium.Cartesian3.fromDegreesArrayHeights([
+            78.14473433271054, 39.519094301687126, 0, 108.29490332070186,
+            24.28096440338249, 0, 134.08730679410138, 49.149581652474076, 0,
+          ]),
+        );
       viewer.entities.add(polylineTrailLinkMaterialEntity.instance);
 
       setIsLoadedViewer(true);
