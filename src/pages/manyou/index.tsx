@@ -92,7 +92,7 @@ export default function Map(props: any) {
 
   const toStart = () => {
     roamViewRef.current.setRoamCameraOffset(90, 0, 50);
-    roamViewRef.current.setRoamSpeed(3);
+    roamViewRef.current.setRoamSpeed(1);
     roamViewRef.current.setRoamTrack(TrackPositions);
     roamViewRef.current.playRoam();
   };

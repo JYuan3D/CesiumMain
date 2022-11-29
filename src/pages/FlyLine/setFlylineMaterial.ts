@@ -9,15 +9,25 @@ let fragmentShaderSource = `
     varying vec3 v_normalEC;
     void main()
     {
-      vec2 st = v_st;
+        vec2 st = v_st;
+        // 箭头飞线，宽度 8
+        float xx = fract(st.s*10.0 + st.t  - czm_frameNumber/60.0);
+        if (st.t<0.5) {
+            xx = fract(st.s*10.0 - st.t - czm_frameNumber/60.0);
+        }
+        float r = 0.0;
+        float g = xx;
+        float b = xx;
+        float a = xx;
 
-      float xx = fract(st.s - czm_frameNumber/60.0);
-      float r = xx;
-      float g = 0.0;
-      float b = 0.0;
-      float a = xx;
+        // 飞线边框
+        if (st.t>0.8||st.t<0.2) {
+            g = 1.0;
+            b = 1.0;
+            a = 0.4;
+        }
 
-      gl_FragColor = vec4(r,g,b,a);
+        gl_FragColor = vec4(r,g,b,a);
     }
   `;
 
