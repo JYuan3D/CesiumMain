@@ -55,7 +55,7 @@ class RoamView {
       // uri: './static/model/npc/SM_FBJD_Boy.glb',
       // 飞机
       uri: './static/model/CesiumAir/Cesium_Air.glb',
-      scale: 10,
+      scale: 1,
     });
     return model;
   }
@@ -98,15 +98,15 @@ class RoamView {
     _self.viewer.clock.stopTime = stopJulianDate.clone(); // 时钟的停止时间
     _self.viewer.clock.currentTime = startJulianDate.clone();
     // clockRange是播放模式, Cesium.ClockRange.LOOP_STOP自动循环播放
-    _self.viewer.clock.clockRange = Cesium.ClockRange.CLAMPED;
+    _self.viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
     // multiplier是播放的速度
     // this.viewer.clock.multiplier = 0.5;
     // 将时间线设置为模拟边界
     // this.viewer.timeline.zoomTo(startJulianDate, stopJulianDate);
-    _self.viewer.clock.onStop.addEventListener(() => {
-      console.warn('结束巡航...........');
-      _self.cancelRoam();
-    });
+    // _self.viewer.clock.onStop.addEventListener(() => {
+    //   console.warn('结束巡航...........');
+    //   _self.cancelRoam();
+    // });
   }
 
   setRoamTrack(TrackPositions: Array<number[]>) {
@@ -131,7 +131,7 @@ class RoamView {
       path: this.path, // 与该实体关联的路径
     });
     // 追踪物体
-    this.viewer.trackedEntity = entity;
+    // this.viewer.trackedEntity = entity;
   }
 
   // 根据坐标数组，计算插值点数据（计算环形飞行）
