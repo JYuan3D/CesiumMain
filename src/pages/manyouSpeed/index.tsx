@@ -70,12 +70,8 @@ export default function Map(props: any) {
 
   useEffect(() => {
     if (!isLoadedViewer) {
-      let osm = new Cesium.OpenStreetMapImageryProvider({
-        url: 'https://a.tile.openstreetmap.org/',
-      });
 
       const viewer = new Cesium.Viewer(cesiums.current, {
-        imageryProvider: osm,
         contextOptions: {
           webgl: {
             alpha: true,
@@ -284,8 +280,8 @@ export default function Map(props: any) {
   const setModel = (viewer: Cesium.Viewer): Cesium.Model => {
     const modelPrimitive: Cesium.Model = viewer.scene.primitives.add(
       Cesium.Model.fromGltf({
-        url: './static/model/npc/SM_FBJD_Boy.glb',
-        scale: 0.03,
+        url: './static/model/npc/SM_XMH_EM_WRJ_01_GLB.glb',
+        scale: 5,
       }),
     );
     return modelPrimitive;
@@ -300,11 +296,6 @@ export default function Map(props: any) {
     model.activeAnimations.addAll({
       loop: Cesium.ModelAnimationLoop.REPEAT,
       animationTime: function (duration: number) {
-        // console.warn(
-        //   '[distance.getValue(modelClockRef.current!.currentTime) / duration]',
-        //   modelClockRef.current!.currentTime,
-        //   distance.getValue(modelClockRef.current!.currentTime),
-        // );
         return distance.getValue(modelClockRef.current!.currentTime) / duration;
       },
       multiplier: 0.25,
@@ -513,7 +504,6 @@ export default function Map(props: any) {
           modelClockRef.current!.shouldAnimate = false;
           modelClockStopListener();
           setTimeout(() => {
-            // console.warn('结束巡航...........', newPositionCartesian3Index);
             toStart(viewer, allPosition, newPositionCartesian3Index);
           }, 50);
         }
@@ -523,7 +513,7 @@ export default function Map(props: any) {
   };
 
   const toGoon = (viewer: Cesium.Viewer) => {
-    modelClockRef.current!.shouldAnimate = true;
+    modelClockRef.current!.shouldAnimate = true;center
   };
 
   const toStop = (viewer: Cesium.Viewer) => {
