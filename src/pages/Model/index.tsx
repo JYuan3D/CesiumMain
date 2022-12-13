@@ -66,8 +66,8 @@ const options = [
     height: 0,
   },
   {
-    label: 'SM_XMH_EM_WRJ_01',
-    value: './static/model/npc/SM_XMH_EM_WRJ_01.FBX',
+    label: 'SM_XMH_EM_WRJ_01_GLB',
+    value: './static/model/npc/SM_XMH_EM_WRJ_01_GLB.glb',
     height: 0,
   },
 ];
