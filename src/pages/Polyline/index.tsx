@@ -54,10 +54,10 @@ export default function Map(props: any) {
       controls.push(Cesium.Cartesian3.fromDegrees(122.1367529, 36.9629172));
       controls.push(Cesium.Cartesian3.fromDegrees(124.1367529, 35.9629172));
 
-      drawLine1(viewer);
-      drawLine2(viewer);
+      // drawLine1(viewer);
+      // drawLine2(viewer);
       drawLine3(viewer);
-      drawLine4(viewer);
+      // drawLine4(viewer);
 
       setIsLoadedViewer(true);
     }

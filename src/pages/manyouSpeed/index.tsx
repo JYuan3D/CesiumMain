@@ -40,6 +40,27 @@ function getHeading(pointA: Cesium.Cartesian3, pointB: Cesium.Cartesian3) {
   return Cesium.Math.TWO_PI - Cesium.Math.zeroToTwoPi(heading);
 }
 
+function ByDirectionAndHeight(
+  position: Cesium.Cartesian3,
+  angle: number,
+  height: number,
+) {
+  // 从具有东北向上轴的参考帧计算4x4变换矩阵以提供的原点为中心，以提供的椭球的固定参考系为中心。
+  let matrix = Cesium.Transforms.eastNorthUpToFixedFrame(position);
+  // 创建围绕z轴的旋转矩阵
+  let mx = Cesium.Matrix3.fromRotationX(Cesium.Math.toRadians(angle || 0));
+  // 从Matrix3计算代表旋转的Matrix4实例和代表翻译的Cartesian3
+  let rotationX = Cesium.Matrix4.fromRotationTranslation(mx);
+  // 计算两个矩阵(matrix * rotationX)的乘积
+  Cesium.Matrix4.multiply(matrix, rotationX, matrix);
+  let result = Cesium.Matrix4.multiplyByPoint(
+    matrix,
+    new Cesium.Cartesian3(0, height, 0),
+    new Cesium.Cartesian3(),
+  );
+  return result;
+}
+
 export default function Map(props: any) {
   const cesiums = useRef<any>();
   const popupDom = useRef<any>();
@@ -70,7 +91,6 @@ export default function Map(props: any) {
 
   useEffect(() => {
     if (!isLoadedViewer) {
-
       const viewer = new Cesium.Viewer(cesiums.current, {
         contextOptions: {
           webgl: {
@@ -251,7 +271,7 @@ export default function Map(props: any) {
       font: '20px sans-serif',
       showBackground: true,
       distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, 100.0),
-      eyeOffset: new Cesium.Cartesian3(0, 7.2, 0),
+      eyeOffset: new Cesium.Cartesian3(0, 7.2 + 20, 0),
     });
     modelLabel.position = position;
     modelLabel.orientation = new Cesium.VelocityOrientationProperty(position);
@@ -281,7 +301,7 @@ export default function Map(props: any) {
     const modelPrimitive: Cesium.Model = viewer.scene.primitives.add(
       Cesium.Model.fromGltf({
         url: './static/model/npc/SM_XMH_EM_WRJ_01_GLB.glb',
-        scale: 5,
+        scale: 10,
       }),
     );
     return modelPrimitive;
@@ -312,7 +332,8 @@ export default function Map(props: any) {
     const rot = new Cesium.Matrix3();
     let eventListener = viewer.scene.preUpdate.addEventListener(function () {
       const time = modelClockRef.current!.currentTime;
-      const pos = position.getValue(time);
+      let pos = position.getValue(time);
+      pos = ByDirectionAndHeight(pos!, 90, 20);
       const vel = velocityVectorProperty.getValue(time);
       if (pos) {
         if (modelClockRef.current!.shouldAnimate) {
@@ -513,7 +534,8 @@ export default function Map(props: any) {
   };
 
   const toGoon = (viewer: Cesium.Viewer) => {
-    modelClockRef.current!.shouldAnimate = true;center
+    modelClockRef.current!.shouldAnimate = true;
+    center;
   };
 
   const toStop = (viewer: Cesium.Viewer) => {

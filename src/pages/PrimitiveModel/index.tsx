@@ -1,4 +1,5 @@
 import { Cesium } from '@sl-theia/vis';
+import { Button } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import styles from './index.less';
 
@@ -36,9 +37,14 @@ export default function Map(props: any) {
         );
         let upPosCartesian3 = ByDirectionAndHeight(center, 90, 1000);
         let downPosCartesian3 = ByDirectionAndHeight(center, -90, 300);
+        let cameraPosCartesian3 = ByDirectionAndHeight(center, 90, 1000);
+        cameraPosCartesian3 = ByDirectionAndLen(cameraPosCartesian3, 180, 1600);
         setPoint(viewer, upPosCartesian3, Cesium.Color.BLUE);
         setPoint(viewer, downPosCartesian3, Cesium.Color.RED);
-        flyModel(viewer, center);
+        setPoint(viewer, cameraPosCartesian3, Cesium.Color.GREEN);
+        setPolyline(viewer, [downPosCartesian3, upPosCartesian3]);
+        setPolyline(viewer, [upPosCartesian3, cameraPosCartesian3]);
+        flyModel(viewer, cameraPosCartesian3);
         modelRef.current = model;
         setIsLoadedViewer(true);
       });
@@ -53,7 +59,7 @@ export default function Map(props: any) {
         url: './static/model/npc/SM_XMH_EM_WRJ_01_GLB.glb',
         show: true,
         modelMatrix: modelMatrix,
-        scale: 50,
+        scale: 128,
         allowPicking: false,
         debugShowBoundingVolume: false,
         debugWireframe: false,
@@ -67,11 +73,8 @@ export default function Map(props: any) {
     position: Cesium.Cartesian3,
     cb?: Function,
   ) => {
-    let cameraPosition = ByDirectionAndHeight(position, 90, 1000);
-    cameraPosition = ByDirectionAndLen(cameraPosition, 180, 1000);
-    setPoint(viewer, cameraPosition, Cesium.Color.GREEN);
     viewer.camera.flyTo({
-      destination: cameraPosition,
+      destination: position,
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
         pitch: Cesium.Math.toRadians(-45.0),
@@ -95,6 +98,26 @@ export default function Map(props: any) {
         pixelSize: 20,
       },
     });
+  };
+
+  const setPolyline = (
+    viewer: Cesium.Viewer,
+    positions: Cesium.Cartesian3[],
+  ) => {
+    viewer.scene.primitives.add(
+      new Cesium.Primitive({
+        geometryInstances: new Cesium.GeometryInstance({
+          geometry: new Cesium.PolylineGeometry({
+            positions: positions,
+            width: 2.0,
+            vertexFormat: Cesium.PolylineColorAppearance.VERTEX_FORMAT,
+            colors: [Cesium.Color.YELLOW, Cesium.Color.YELLOW],
+            colorsPerVertex: true,
+          }),
+        }),
+        appearance: new Cesium.PolylineColorAppearance(),
+      }),
+    );
   };
 
   const ByDirectionAndHeight = (
@@ -139,13 +162,119 @@ export default function Map(props: any) {
     return result;
   };
 
+  const adjustRotate = (model: Cesium.Model, rotateX: number) => {
+    let m = model.modelMatrix;
+    let rotationM = Cesium.Matrix3.fromRotationZ(
+      Cesium.Math.toRadians(rotateX),
+    ); // rtaleX表示水平方向旋转的度数
+    let newMatrix4 = Cesium.Matrix4.multiplyByMatrix3(
+      m,
+      rotationM,
+      new Cesium.Matrix4(),
+    ); // 计算矩阵4的变换矩阵（在原变换中，累加变换）
+    model.modelMatrix = newMatrix4;
+  };
+
+  const adjustTranslation = (viewer: Cesium.Viewer, model: Cesium.Model) => {
+    let center = Cesium.Matrix4.multiplyByPoint(
+      model.modelMatrix,
+      model.boundingSphere.center,
+      new Cesium.Cartesian3(),
+    );
+    const position = ByDirectionAndLen(center, 0, 300);
+    setPoint(viewer, position, Cesium.Color.CORNSILK);
+    const m1 = Cesium.Transforms.eastNorthUpToFixedFrame(
+      Cesium.Matrix4.getTranslation(model.modelMatrix, new Cesium.Cartesian3()),
+      Cesium.Ellipsoid.WGS84,
+      new Cesium.Matrix4(),
+    );
+    const m3 = Cesium.Matrix4.multiply(
+      Cesium.Matrix4.inverse(m1, new Cesium.Matrix4()),
+      model.modelMatrix,
+      new Cesium.Matrix4(),
+    );
+    const mat3 = Cesium.Matrix4.getRotation(m3, new Cesium.Matrix3());
+    const q = Cesium.Quaternion.fromRotationMatrix(mat3);
+    const hpr = Cesium.HeadingPitchRoll.fromQuaternion(q);
+    const headingPitchRoll = new Cesium.HeadingPitchRoll(
+      hpr.heading,
+      hpr.pitch,
+      hpr.roll,
+    ); // 获取当前模型heading，pitch，roll
+    const m = Cesium.Transforms.headingPitchRollToFixedFrame(
+      position,
+      headingPitchRoll,
+      Cesium.Ellipsoid.WGS84,
+      Cesium.Transforms.eastNorthUpToFixedFrame,
+      new Cesium.Matrix4(),
+    );
+    model.modelMatrix = m;
+  };
+
+  const adjustHeight = (
+    viewer: Cesium.Viewer,
+    model: Cesium.Model,
+    height: number,
+  ) => {
+    let oldMatrix = model.modelMatrix; // 模型的矩阵
+    let oldCenter = new Cesium.Cartesian3(
+      oldMatrix[12],
+      oldMatrix[13],
+      oldMatrix[14],
+    ); // 模型高度调整前中心点笛卡尔坐标
+    let oldCartographic = Cesium.Cartographic.fromCartesian(oldCenter); // 高度调整前的弧度坐标
+    let newHeight = oldCartographic.height + height;
+    let newCartographic = new Cesium.Cartographic(
+      oldCartographic.longitude,
+      oldCartographic.latitude,
+      newHeight,
+    ); // 高度调整后的弧度坐标
+    let newCartesian =
+      viewer.scene.globe.ellipsoid.cartographicToCartesian(newCartographic);
+    setPoint(viewer, newCartesian, Cesium.Color.CORNSILK);
+    let headingPitchRoll = new Cesium.HeadingPitchRoll(0, 0, 0);
+    let m = Cesium.Transforms.headingPitchRollToFixedFrame(
+      newCartesian,
+      headingPitchRoll,
+      Cesium.Ellipsoid.WGS84,
+      Cesium.Transforms.eastNorthUpToFixedFrame,
+      new Cesium.Matrix4(),
+    );
+    model.modelMatrix = m; // 平移变换
+  };
+
   return (
     <>
       <div className={styles.container} ref={cesiums}></div>
       <div className={styles.btnWrap} style={{ top: 8 }}>
-        <button onClick={() => flyModel(viewerRef.current, modelRef.current)}>
-          飞行到目标
-        </button>
+        <div className={styles.btnItem} style={{ marginBottom: 8 }}>
+          <Button
+            type="primary"
+            onClick={() => adjustRotate(modelRef.current, 45)}
+          >
+            旋转模型
+          </Button>
+        </div>
+        <div className={styles.btnItem} style={{ marginBottom: 8 }}>
+          <Button
+            type="primary"
+            onClick={() =>
+              adjustHeight(viewerRef.current, modelRef.current, 300)
+            }
+          >
+            升高模型
+          </Button>
+        </div>
+        <div className={styles.btnItem} style={{ marginBottom: 8 }}>
+          <Button
+            type="primary"
+            onClick={() =>
+              adjustTranslation(viewerRef.current, modelRef.current)
+            }
+          >
+            平移模型
+          </Button>
+        </div>
       </div>
     </>
   );
