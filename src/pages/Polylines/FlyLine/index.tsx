@@ -12,11 +12,6 @@ export default function Map(props: any) {
   useEffect(() => {
     if (!isLoadedViewer) {
       const viewer = new Cesium.Viewer(cesiums.current, {
-        contextOptions: {
-          webgl: {
-            alpha: true,
-          },
-        },
         selectionIndicator: false,
         animation: false, //是否显示动画控件
         baseLayerPicker: false, //是否显示图层选择控件

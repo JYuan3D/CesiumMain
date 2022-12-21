@@ -1,5 +1,6 @@
 import { Cesium } from '@sl-theia/vis';
 import { useEffect, useRef, useState } from 'react';
+// import { drawRectangle } from './Draw/surface';
 import styles from './index.less';
 
 //参数为什么类型,可根据函数API去传参
@@ -43,6 +44,7 @@ export default function Map(props: any) {
       });
       viewerRef.current = viewer;
       setIsLoadedViewer(true);
+
       drawWall(viewer, [-95.0, 50.0], 510, 920);
     }
   }, []);
@@ -55,12 +57,6 @@ export default function Map(props: any) {
   ) => {
     let image = new Image(imageWidth, imageHeight);
     image.src = require('./lineLight.png');
-
-    let fenceImageMaterialProperty = new Cesium.ImageMaterialProperty({
-      image: image,
-      repeat: new Cesium.Cartesian2(1, 1),
-      transparent: true,
-    });
 
     let material = new Cesium.Material({
       fabric: {
@@ -83,14 +79,6 @@ export default function Map(props: any) {
     });
 
     const point_1 = Cesium.Cartesian3.fromDegrees(origin[0], origin[1]); // 原点
-    const point_2 = ByDirectionAndLen(point_1, 90, imageWidth / 2); // 右点（东边）
-    let cartographic_2 = Cesium.Cartographic.fromCartesian(point_2);
-    let longitude_2 = Cesium.Math.toDegrees(cartographic_2.longitude);
-
-    const point_3 = ByDirectionAndLen(point_1, 270, imageWidth / 2); // 左点（西边）
-    let cartographic_3 = Cesium.Cartographic.fromCartesian(point_3);
-    let longitude_3 = Cesium.Math.toDegrees(cartographic_3.longitude);
-
     const point_4 = ByDirectionAndLen(point_1, 0, imageWidth / 2); // 上点（北边）
     let cartographic_4 = Cesium.Cartographic.fromCartesian(point_4);
     let latitude_4 = Cesium.Math.toDegrees(cartographic_4.latitude);
@@ -99,36 +87,6 @@ export default function Map(props: any) {
     let cartographic_5 = Cesium.Cartographic.fromCartesian(point_5);
     let latitude_5 = Cesium.Math.toDegrees(cartographic_5.latitude);
 
-    let wallGraphics_front = new Cesium.WallGraphics({
-      positions: Cesium.Cartesian3.fromDegreesArray([
-        longitude_3,
-        origin[1],
-        longitude_2,
-        origin[1],
-      ]),
-      maximumHeights: [imageHeight, imageHeight],
-      minimumHeights: [0, 0],
-      outline: false,
-      material: fenceImageMaterialProperty,
-    });
-    let wallEntity_front = new Cesium.Entity({
-      wall: wallGraphics_front,
-    });
-
-    viewer.entities.add(wallEntity_front);
-
-    let wallInstance1 = new Cesium.GeometryInstance({
-      geometry: Cesium.WallGeometry.fromConstantHeights({
-        positions: Cesium.Cartesian3.fromDegreesArray([
-          origin[0],
-          latitude_4,
-          origin[0],
-          latitude_5,
-        ]),
-        maximumHeight: imageHeight,
-        minimumHeight: 0.0,
-      }),
-    });
     let wallInstance2 = new Cesium.GeometryInstance({
       geometry: Cesium.WallGeometry.fromConstantHeights({
         positions: Cesium.Cartesian3.fromDegreesArray([
@@ -149,9 +107,23 @@ export default function Map(props: any) {
         material: material,
       }),
     });
-    viewer.scene.primitives.add(Primitive);
+    const primitive = viewer.scene.primitives.add(Primitive);
+    primitive.readyPromise.then(() => {
+      flytoPrimitive(viewer, primitive);
+    });
+  };
 
-    viewer.zoomTo(wallEntity_front);
+  const flytoPrimitive = (viewer: Cesium.Viewer, primitive: any) => {
+    const boundingSphere = primitive._boundingSpheres[0];
+    viewer.camera.flyToBoundingSphere(boundingSphere, {
+      duration: 1.5,
+      offset: new Cesium.HeadingPitchRange(
+        Cesium.Math.toRadians(-45.0),
+        Cesium.Math.toRadians(-60.0),
+        8000,
+      ),
+      complete: () => {},
+    });
   };
 
   return (

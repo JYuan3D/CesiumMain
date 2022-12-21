@@ -58,7 +58,7 @@ const setPoint = (
     position: position,
     point: {
       color: color,
-      pixelSize: 100,
+      pixelSize: 50,
     },
   });
 };

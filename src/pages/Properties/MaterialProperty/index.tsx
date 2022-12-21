@@ -119,6 +119,43 @@ export default function Map(props: any) {
     );
   };
 
+  const setImageMaterialProperty = (targetEntity: Cesium.Entity) => {
+    targetEntity.box!.material = new Cesium.ImageMaterialProperty({
+      image: require('./wall.png'),
+      repeat: new Cesium.Cartesian2(1, 1),
+      color: new Cesium.Color(0.0, 1.0, 0.0, 1.0),
+      transparent: true,
+    });
+  };
+
+  const setGridMaterialProperty = (targetEntity: Cesium.Entity) => {
+    targetEntity.box!.material = new Cesium.GridMaterialProperty({
+      color: new Cesium.Color(0.0, 1.0, 0.0, 1.0),
+      cellAlpha: 0.1,
+      lineCount: new Cesium.Cartesian2(8, 8),
+      lineThickness: new Cesium.Cartesian2(1, 1),
+      lineOffset: new Cesium.Cartesian2(0, 0),
+    });
+  };
+
+  const setStripeMaterialProperty = (targetEntity: Cesium.Entity) => {
+    targetEntity.box!.material = new Cesium.StripeMaterialProperty({
+      orientation: Cesium.StripeOrientation.HORIZONTAL,
+      evenColor: new Cesium.Color(0.0, 1.0, 0.0, 1.0),
+      oddColor: new Cesium.Color(0.0, 1.0, 0.0, 0.1),
+      offset: 6,
+      repeat: 10,
+    });
+  };
+
+  const setCheckerboardMaterialProperty = (targetEntity: Cesium.Entity) => {
+    targetEntity.box!.material = new Cesium.CheckerboardMaterialProperty({
+      evenColor: new Cesium.Color(0.0, 1.0, 0.0, 1.0),
+      oddColor: new Cesium.Color(0.0, 1.0, 0.0, 0.1),
+      repeat: new Cesium.Cartesian2(2, 2.0),
+    });
+  };
+
   return (
     <>
       <div className={styles.container} ref={cesiums}></div>
@@ -142,6 +179,38 @@ export default function Map(props: any) {
             onClick={() => setDynamicColorMaterialProperty(blueBoxRef.current)}
           >
             设置Box Dynamic ColorMaterialProperty
+          </Button>
+        </div>
+        <div className={styles.btnItem} style={{ marginBottom: 8 }}>
+          <Button
+            type="primary"
+            onClick={() => setImageMaterialProperty(blueBoxRef.current)}
+          >
+            设置Box ImageMaterialProperty
+          </Button>
+        </div>
+        <div className={styles.btnItem} style={{ marginBottom: 8 }}>
+          <Button
+            type="primary"
+            onClick={() => setGridMaterialProperty(blueBoxRef.current)}
+          >
+            设置Box GridMaterialProperty
+          </Button>
+        </div>
+        <div className={styles.btnItem} style={{ marginBottom: 8 }}>
+          <Button
+            type="primary"
+            onClick={() => setStripeMaterialProperty(blueBoxRef.current)}
+          >
+            设置Box StripeMaterialProperty
+          </Button>
+        </div>
+        <div className={styles.btnItem} style={{ marginBottom: 8 }}>
+          <Button
+            type="primary"
+            onClick={() => setCheckerboardMaterialProperty(blueBoxRef.current)}
+          >
+            设置Box CheckerboardMaterialProperty
           </Button>
         </div>
       </div>
