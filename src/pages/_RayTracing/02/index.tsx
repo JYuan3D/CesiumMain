@@ -152,7 +152,9 @@ export default function Map(props: any) {
     // 为了将这个向量归一化（normalize）并将其转化成真正的法线，我们需要将它除以它自己的长度，从而保证结果的长度为1
     normal = Multiply(1.0 / Length(normal), normal);
 
-    return Multiply(ComputeLighting(point, normal), closest_sphere.color);
+    let intensity = ComputeLighting(point, normal);
+    // debugger;
+    return Multiply(intensity, closest_sphere.color);
   };
 
   const IntersectRaySphere = (
@@ -195,6 +197,7 @@ export default function Map(props: any) {
           vec_l = light.position;
         }
 
+        // 新增内容入射强度
         let n_dot_l = DotProduct(normal, vec_l!);
         if (n_dot_l > 0) {
           intensity +=

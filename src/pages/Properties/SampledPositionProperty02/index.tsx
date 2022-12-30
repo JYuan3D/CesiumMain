@@ -105,7 +105,8 @@ export default function Map(props: any) {
         position: position,
         orientation: new Cesium.VelocityOrientationProperty(position),
         model: {
-          uri: './cesium/models/CesiumAir/Cesium_Air.glb',
+          // uri: './cesium/models/CesiumAir/Cesium_Air.glb',
+          uri: "./static/model/npc/SM_XMH_EM_WRJ_01_GLB.glb",
           minimumPixelSize: 128,
           maximumScale: 128,
         },

@@ -39,23 +39,30 @@ const Clamp = (vec: number[]) => {
   ];
 };
 
+const ReflectRay = (v1: number[], v2: number[]) => {
+  return Subtract(Multiply(2 * DotProduct(v1, v2), v2), v1);
+};
+
 // 一个球体
 class Sphere {
   center: number[];
   radius: number;
   color: number[];
   specular: number;
+  reflective: number;
 
   constructor(
     center: number[],
     radius: number,
     color: number[],
     specular: number,
+    reflective: number,
   ) {
     this.center = center;
     this.radius = radius;
     this.color = color;
     this.specular = specular;
+    this.reflective = reflective;
   }
 }
 
@@ -82,12 +89,12 @@ export default function Map(props: any) {
   const viewport_size = 1;
   const projection_plane_z = 1;
   const camera_position = [0, 0, 0];
-  const background_color = [255, 255, 255];
+  const background_color = [0, 0, 0];
   const spheres = [
-    new Sphere([0, -1, 3], 1, [255, 0, 0], 500),
-    new Sphere([2, 0, 4], 1, [0, 0, 255], 500),
-    new Sphere([-2, 0, 4], 1, [0, 255, 0], 10),
-    new Sphere([0, -5001, 0], 5000, [255, 255, 0], 1000),
+    new Sphere([0, -1, 3], 1, [255, 0, 0], 500, 0.2),
+    new Sphere([-2, 0, 4], 1, [0, 255, 0], 10, 0.4),
+    new Sphere([2, 0, 4], 1, [0, 0, 255], 500, 0.3),
+    new Sphere([0, -5001, 0], 5000, [255, 255, 0], 1000, 0.5),
   ];
 
   const lights = [
@@ -96,27 +103,12 @@ export default function Map(props: any) {
     new Light(Light.DIRECTIONAL, 0.2, [1, 4, 4]),
   ];
 
+  let EPSILON = 0.001;
+  let recursion_depth = 3;
+
   useEffect(() => {
     let canvas: HTMLCanvasElement = canvasRef.current;
-    let canvas_context = canvas.getContext('2d');
-    let canvas_buffer = canvas_context!.getImageData(
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    );
-    let canvas_pitch = canvas_buffer.width * 4;
-
-    // 主循环
-    for (let x = -canvas.width / 2; x < canvas.width / 2; x++) {
-      for (let y = -canvas.height / 2; y < canvas.height / 2; y++) {
-        let direction = CanvasToViewport(canvas, [x, y]);
-        let color = TraceRay(camera_position, direction, 1, Infinity);
-        PutPixel(canvas, canvas_buffer, canvas_pitch, x, y, Clamp(color));
-      }
-    }
-
-    UpdateCanvas(canvas_context!, canvas_buffer);
+    Render(canvas);
   }, []);
 
   // 将2D画布坐标转换为3D视口坐标
@@ -133,9 +125,56 @@ export default function Map(props: any) {
     direction: number[],
     min_t: number,
     max_t: number,
-  ) => {
-    let closest_t = Infinity;
-    let closest_sphere = null;
+    depth: number,
+  ): number[] => {
+    let intersection = ClosestIntersection(origin, direction, min_t, max_t);
+    if (!intersection) {
+      return background_color;
+    }
+
+    let closest_sphere = intersection[0];
+    let closest_t = intersection[1];
+
+    let point = Add(origin, Multiply(closest_t, direction));
+    let normal = Subtract(point, closest_sphere.center);
+    normal = Multiply(1.0 / Length(normal), normal);
+
+    let view = Multiply(-1, direction);
+    let lighting = ComputeLighting(
+      point,
+      normal,
+      view,
+      closest_sphere.specular,
+    );
+    let local_color = Multiply(lighting, closest_sphere.color);
+
+    if (closest_sphere.reflective <= 0 || depth <= 0) {
+      return local_color;
+    }
+
+    let reflected_ray = ReflectRay(view, normal);
+    let reflected_color = TraceRay(
+      point,
+      reflected_ray,
+      EPSILON,
+      Infinity,
+      depth - 1,
+    );
+
+    return Add(
+      Multiply(1 - closest_sphere.reflective, local_color),
+      Multiply(closest_sphere.reflective, reflected_color),
+    );
+  };
+
+  const ClosestIntersection = (
+    origin: number[],
+    direction: number[],
+    min_t: number,
+    max_t: number,
+  ): [Sphere, number] | null => {
+    let closest_t: number = Infinity;
+    let closest_sphere: Sphere | null = null;
 
     for (let i = 0; i < spheres.length; i++) {
       let ts = IntersectRaySphere(origin, direction, spheres[i]);
@@ -147,28 +186,12 @@ export default function Map(props: any) {
         closest_t = ts[1];
         closest_sphere = spheres[i];
       }
-      // 使用ts数组中最小的值
     }
 
-    if (closest_sphere == null) {
-      return background_color;
+    if (closest_sphere) {
+      return [closest_sphere, closest_t];
     }
-
-    let point = Add(origin, Multiply(closest_t, direction)); // 找到表面上的点
-    let normal = Subtract(point, closest_sphere.center); // 计算出法线
-    // 为了将这个向量归一化（normalize）并将其转化成真正的法线，我们需要将它除以它自己的长度，从而保证结果的长度为1
-    normal = Multiply(1.0 / Length(normal), normal);
-
-    // 修改内容
-    let view = Multiply(-1, direction);
-    let lighting = ComputeLighting(
-      point,
-      normal,
-      view,
-      closest_sphere.specular,
-    );
-    // debugger;
-    return Multiply(lighting, closest_sphere.color);
+    return null;
   };
 
   const IntersectRaySphere = (
@@ -192,7 +215,6 @@ export default function Map(props: any) {
     return [t1, t2];
   };
 
-  // 计算漫反射光照的函数
   const ComputeLighting = (
     point: number[],
     normal: number[],
@@ -203,33 +225,37 @@ export default function Map(props: any) {
     let length_n = Length(normal); // Should be 1.0, but just in case...
     let length_v = Length(view);
 
-    // 累计多个光源效果
     for (let i = 0; i < lights.length; i++) {
       let light = lights[i];
       if (light.ltype == Light.AMBIENT) {
         intensity += light.intensity;
       } else {
-        let vec_l;
+        let vec_l, t_max;
         if (light.ltype == Light.POINT) {
           vec_l = Subtract(light.position!, point);
+          t_max = 1.0;
         } else {
           // Light.DIRECTIONAL
           vec_l = light.position;
+          t_max = Infinity;
         }
 
-        // 入射强度
+        // Shadow check.
+        let blocker = ClosestIntersection(point, vec_l!, EPSILON, t_max);
+        if (blocker) {
+          continue;
+        }
+
+        // Diffuse reflection.
         let n_dot_l = DotProduct(normal, vec_l!);
         if (n_dot_l > 0) {
           intensity +=
             (light.intensity * n_dot_l) / (length_n * Length(vec_l!));
         }
 
-        // 新增内容反射强度
+        // Specular reflection.
         if (specular != -1) {
-          let vec_r = Subtract(
-            Multiply(2.0 * DotProduct(normal, vec_l!), normal),
-            vec_l!,
-          );
+          let vec_r = ReflectRay(vec_l!, normal);
           let r_dot_v = DotProduct(vec_r, view);
           if (r_dot_v > 0) {
             intensity +=
@@ -274,14 +300,92 @@ export default function Map(props: any) {
     canvas_context.putImageData(canvas_buffer, 0, 0);
   };
 
+  const SetShadowEpsilon = (canvas: HTMLCanvasElement, epsilon: number) => {
+    console.warn('[反射指数]:', epsilon);
+    EPSILON = epsilon;
+    Render(canvas);
+  };
+
+  const SetRecursionDepth = (canvas: HTMLCanvasElement, depth: number) => {
+    console.warn('[递归深度]:', depth);
+    recursion_depth = depth;
+    Render(canvas);
+  };
+
+  const ClearAll = (canvas: HTMLCanvasElement) => {
+    canvas.width = canvas.width;
+  };
+
+  const Render = (canvas: HTMLCanvasElement) => {
+    ClearAll(canvas);
+
+    // This lets the browser clear the canvas before blocking to render the scene.
+    setTimeout(function () {
+      let canvas_context = canvas.getContext('2d');
+      let canvas_buffer = canvas_context!.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+      let canvas_pitch = canvas_buffer.width * 4;
+
+      // 主循环
+      for (let x = -canvas.width / 2; x < canvas.width / 2; x++) {
+        for (let y = -canvas.height / 2; y < canvas.height / 2; y++) {
+          let direction = CanvasToViewport(canvas, [x, y]);
+          let color = TraceRay(
+            camera_position,
+            direction,
+            1,
+            Infinity,
+            recursion_depth,
+          );
+          PutPixel(canvas, canvas_buffer, canvas_pitch, x, y, Clamp(color));
+        }
+      }
+
+      UpdateCanvas(canvas_context!, canvas_buffer);
+    }, 0);
+  };
+
   return (
     <div className={styles.container}>
       <canvas
         ref={canvasRef}
         width="600"
         height="600"
-        style={{ border: '1px rgb(236, 223, 31) solid' }}
+        style={{ border: '1px grey solid' }}
       ></canvas>
+      <div style={{ display: 'block' }}>
+        <button onClick={() => SetShadowEpsilon(canvasRef.current, 0)}>
+          Zero
+        </button>
+        <button onClick={() => SetShadowEpsilon(canvasRef.current, 0.001)}>
+          Epsilon
+        </button>
+        <button onClick={() => SetRecursionDepth(canvasRef.current, 0)}>
+          depth x0
+        </button>
+        <button onClick={() => SetRecursionDepth(canvasRef.current, 1)}>
+          depth x1
+        </button>
+        <button onClick={() => SetRecursionDepth(canvasRef.current, 2)}>
+          depth x2
+        </button>
+        <button onClick={() => SetRecursionDepth(canvasRef.current, 3)}>
+          depth x3
+        </button>
+        <button onClick={() => SetRecursionDepth(canvasRef.current, 4)}>
+          depth x4
+        </button>
+        <button onClick={() => SetRecursionDepth(canvasRef.current, 5)}>
+          depth x5
+        </button>
+        <button onClick={() => SetRecursionDepth(canvasRef.current, 50)}>
+          depth x50
+        </button>
+      </div>
     </div>
   );
 }

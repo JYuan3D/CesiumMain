@@ -89,6 +89,7 @@ export default function Map(props: any) {
       }
       if (ts[1] < closest_t && min_t < ts[1] && ts[1] < max_t) {
         closest_t = ts[1];
+        // debugger;
         closest_sphere = spheres[i];
       }
       // 使用ts数组中最小的值
